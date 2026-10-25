@@ -11,6 +11,10 @@ import { Categories } from './collections/Categories'
 import { Curated } from './collections/Curated'
 import { Products } from './collections/Products'
 import { Pages } from './collections/Pages'
+import { Homepage } from './globals/Homepage'
+import { Navigation } from './globals/Navigation'
+import { LinksPage } from './globals/LinksPage'
+import { StoreSettings } from './globals/StoreSettings'
 import { storagePlugins } from './lib/storage'
 
 const filename = fileURLToPath(import.meta.url)
@@ -24,6 +28,7 @@ export default buildConfig({
     },
   },
   collections: [Users, Media, Categories, Curated, Products, Pages],
+  globals: [Homepage, Navigation, LinksPage, StoreSettings],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

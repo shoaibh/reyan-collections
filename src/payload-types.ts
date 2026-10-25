@@ -95,8 +95,18 @@ export interface Config {
     defaultIDType: number;
   };
   fallbackLocale: null;
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    homepage: Homepage;
+    navigation: Navigation;
+    'links-page': LinksPage;
+    'store-settings': StoreSetting;
+  };
+  globalsSelect: {
+    homepage: HomepageSelect<false> | HomepageSelect<true>;
+    navigation: NavigationSelect<false> | NavigationSelect<true>;
+    'links-page': LinksPageSelect<false> | LinksPageSelect<true>;
+    'store-settings': StoreSettingsSelect<false> | StoreSettingsSelect<true>;
+  };
   locale: null;
   widgets: {
     collections: CollectionsWidget;
@@ -696,6 +706,298 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "homepage".
+ */
+export interface Homepage {
+  id: number;
+  announcement?:
+    | {
+        text: string;
+        id?: string | null;
+      }[]
+    | null;
+  hero: {
+    pill?: string | null;
+    headline: string;
+    highlightWord?: string | null;
+    subtext?: string | null;
+    ctaPrimary?: {
+      label?: string | null;
+      link?: string | null;
+    };
+    ctaSecondary?: {
+      label?: string | null;
+      link?: string | null;
+    };
+    productA?: (number | null) | Product;
+    productB?: (number | null) | Product;
+    imageOverrideA?: (number | null) | Media;
+    imageOverrideB?: (number | null) | Media;
+    stickerText?: string | null;
+  };
+  favouritesCollection?: (number | null) | Curated;
+  _status?: ('draft' | 'published') | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "navigation".
+ */
+export interface Navigation {
+  id: number;
+  items?:
+    | {
+        label: string;
+        linkType: 'category' | 'collection' | 'page' | 'shop';
+        category?: (number | null) | Category;
+        collection?: (number | null) | Curated;
+        page?: (number | null) | Page;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "links-page".
+ */
+export interface LinksPage {
+  id: number;
+  tagline?: string | null;
+  buttons?:
+    | {
+        label: string;
+        url: string;
+        iconType?: ('shop' | 'whatsapp' | 'amazon' | 'flipkart' | 'meesho' | 'instagram' | 'link') | null;
+        highlight?: boolean | null;
+        enabled?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "store-settings".
+ */
+export interface StoreSetting {
+  id: number;
+  business?: {
+    name?: string | null;
+    legalName?: string | null;
+    gstin?: string | null;
+    address?: {
+      line1?: string | null;
+      line2?: string | null;
+      city?: string | null;
+      state?: string | null;
+      stateCode?: string | null;
+      pincode?: string | null;
+    };
+    pickupSameAsBusiness?: boolean | null;
+    pickupAddress?: {
+      line1?: string | null;
+      line2?: string | null;
+      city?: string | null;
+      state?: string | null;
+      stateCode?: string | null;
+      pincode?: string | null;
+    };
+    whatsappNumber?: string | null;
+    phone?: string | null;
+    email?: string | null;
+  };
+  social?: {
+    instagramUrl?: string | null;
+    amazonStoreUrl?: string | null;
+    flipkartStoreUrl?: string | null;
+    meeshoStoreUrl?: string | null;
+    ratings?: {
+      amazon?: number | null;
+      flipkart?: number | null;
+      meesho?: number | null;
+    };
+  };
+  commerce?: {
+    shippingFee?: number | null;
+    freeShippingAbove?: number | null;
+    prepaidDiscount?: number | null;
+    codMaxOrderValue?: number | null;
+    maxPerOrder?: number | null;
+    returnWindowDays?: number | null;
+  };
+  timeouts?: {
+    pendingPaymentMinutes?: number | null;
+    codConfirmHours?: number | null;
+  };
+  invoicing?: {
+    invoicePrefix?: string | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "homepage_select".
+ */
+export interface HomepageSelect<T extends boolean = true> {
+  announcement?:
+    | T
+    | {
+        text?: T;
+        id?: T;
+      };
+  hero?:
+    | T
+    | {
+        pill?: T;
+        headline?: T;
+        highlightWord?: T;
+        subtext?: T;
+        ctaPrimary?:
+          | T
+          | {
+              label?: T;
+              link?: T;
+            };
+        ctaSecondary?:
+          | T
+          | {
+              label?: T;
+              link?: T;
+            };
+        productA?: T;
+        productB?: T;
+        imageOverrideA?: T;
+        imageOverrideB?: T;
+        stickerText?: T;
+      };
+  favouritesCollection?: T;
+  _status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "navigation_select".
+ */
+export interface NavigationSelect<T extends boolean = true> {
+  items?:
+    | T
+    | {
+        label?: T;
+        linkType?: T;
+        category?: T;
+        collection?: T;
+        page?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "links-page_select".
+ */
+export interface LinksPageSelect<T extends boolean = true> {
+  tagline?: T;
+  buttons?:
+    | T
+    | {
+        label?: T;
+        url?: T;
+        iconType?: T;
+        highlight?: T;
+        enabled?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "store-settings_select".
+ */
+export interface StoreSettingsSelect<T extends boolean = true> {
+  business?:
+    | T
+    | {
+        name?: T;
+        legalName?: T;
+        gstin?: T;
+        address?:
+          | T
+          | {
+              line1?: T;
+              line2?: T;
+              city?: T;
+              state?: T;
+              stateCode?: T;
+              pincode?: T;
+            };
+        pickupSameAsBusiness?: T;
+        pickupAddress?:
+          | T
+          | {
+              line1?: T;
+              line2?: T;
+              city?: T;
+              state?: T;
+              stateCode?: T;
+              pincode?: T;
+            };
+        whatsappNumber?: T;
+        phone?: T;
+        email?: T;
+      };
+  social?:
+    | T
+    | {
+        instagramUrl?: T;
+        amazonStoreUrl?: T;
+        flipkartStoreUrl?: T;
+        meeshoStoreUrl?: T;
+        ratings?:
+          | T
+          | {
+              amazon?: T;
+              flipkart?: T;
+              meesho?: T;
+            };
+      };
+  commerce?:
+    | T
+    | {
+        shippingFee?: T;
+        freeShippingAbove?: T;
+        prepaidDiscount?: T;
+        codMaxOrderValue?: T;
+        maxPerOrder?: T;
+        returnWindowDays?: T;
+      };
+  timeouts?:
+    | T
+    | {
+        pendingPaymentMinutes?: T;
+        codConfirmHours?: T;
+      };
+  invoicing?:
+    | T
+    | {
+        invoicePrefix?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
