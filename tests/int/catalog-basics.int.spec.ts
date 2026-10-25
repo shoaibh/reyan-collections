@@ -46,6 +46,25 @@ describe('Catalog basics', () => {
     ).rejects.toThrow()
   })
 
+  it('keeps the slug on a partial update', async () => {
+    const category = await payload.create({
+      collection: 'categories',
+      data: { title: 'Kitchen & Home', tileColor: 'mint' },
+      overrideAccess: true,
+    })
+    created.push({ collection: 'categories', id: category.id })
+    expect(category.slug).toBe('kitchen-and-home')
+
+    const updated = await payload.update({
+      collection: 'categories',
+      id: category.id,
+      data: { description: 'Storage and gadgets' },
+      overrideAccess: true,
+    })
+
+    expect(updated.slug).toBe('kitchen-and-home')
+  })
+
   it('hides draft pages from the public', async () => {
     const draft = await payload.create({
       collection: 'pages',

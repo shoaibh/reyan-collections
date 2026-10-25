@@ -26,8 +26,10 @@ export function slugField(source = 'title'): Field {
     },
     hooks: {
       beforeValidate: [
-        ({ value, data }) => {
+        ({ value, data, originalDoc }) => {
           if (typeof value === 'string' && value.trim() !== '') return value
+          const existing = (originalDoc as Record<string, unknown> | undefined)?.slug
+          if (typeof existing === 'string' && existing.trim() !== '') return existing
           const sourceValue = data?.[source]
           return slugify(typeof sourceValue === 'string' ? sourceValue : '')
         },
