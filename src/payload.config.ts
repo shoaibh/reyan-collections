@@ -7,6 +7,9 @@ import sharp from 'sharp'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
+import { Categories } from './collections/Categories'
+import { Curated } from './collections/Curated'
+import { Pages } from './collections/Pages'
 import { storagePlugins } from './lib/storage'
 
 const filename = fileURLToPath(import.meta.url)
@@ -19,7 +22,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media],
+  collections: [Users, Media, Categories, Curated, Pages],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
@@ -31,6 +34,6 @@ export default buildConfig({
     },
   }),
   sharp,
-  upload: { limits: { fileSize: 15_000_000 } },
+  upload: { limits: { fileSize: 15_000_000 }, abortOnLimit: true },
   plugins: [...storagePlugins()],
 })

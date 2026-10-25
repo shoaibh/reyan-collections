@@ -5,9 +5,17 @@ export const Users: CollectionConfig = {
   admin: {
     useAsTitle: 'email',
   },
-  auth: true,
+  auth: {
+    maxLoginAttempts: 5,
+    lockTime: 600_000,
+  },
   fields: [
-    // Email added by default
-    // Add more fields as needed
+    {
+      name: 'role',
+      type: 'select',
+      options: ['owner'],
+      defaultValue: 'owner',
+      required: true,
+    },
   ],
 }
