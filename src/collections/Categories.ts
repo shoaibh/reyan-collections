@@ -1,4 +1,4 @@
-import type { CollectionConfig } from 'payload'
+import { APIError, type CollectionConfig } from 'payload'
 
 import { isAdmin } from '../access/isAdmin'
 import { slugField } from '../fields/slug'
@@ -14,6 +14,24 @@ export const Categories: CollectionConfig = {
     create: isAdmin,
     update: isAdmin,
     delete: isAdmin,
+  },
+  hooks: {
+    beforeDelete: [
+      async ({ id, req }) => {
+        const { totalDocs } = await req.payload.count({
+          collection: 'products',
+          where: { category: { equals: id } },
+          req,
+          overrideAccess: true,
+        })
+        if (totalDocs > 0) {
+          throw new APIError(
+            `This category is used by ${totalDocs} product(s). Move them to another category first.`,
+            400,
+          )
+        }
+      },
+    ],
   },
   fields: [
     {

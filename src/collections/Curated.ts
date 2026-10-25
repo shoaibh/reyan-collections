@@ -30,6 +30,12 @@ export const Curated: CollectionConfig = {
       type: 'textarea',
     },
     {
+      name: 'products',
+      type: 'relationship',
+      relationTo: 'products',
+      hasMany: true,
+    },
+    {
       name: 'order',
       type: 'number',
       defaultValue: 0,

@@ -71,6 +71,7 @@ export interface Config {
     media: Media;
     categories: Category;
     curated: Curated;
+    products: Product;
     pages: Page;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -83,6 +84,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     curated: CuratedSelect<false> | CuratedSelect<true>;
+    products: ProductsSelect<false> | ProductsSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -235,9 +237,88 @@ export interface Curated {
   title: string;
   slug?: string | null;
   description?: string | null;
+  products?: (number | Product)[] | null;
   order?: number | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "products".
+ */
+export interface Product {
+  id: number;
+  title: string;
+  slug?: string | null;
+  images: (number | Media)[];
+  boxImage?: (number | null) | Media;
+  price: number;
+  compareAt?: {
+    marketplace?: ('amazon' | 'flipkart' | 'meesho') | null;
+    price?: number | null;
+    url?: string | null;
+    checkedOn?: string | null;
+  };
+  marketplaceLinks?:
+    | {
+        marketplace: 'amazon' | 'flipkart' | 'meesho';
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  variants: {
+    name: string;
+    swatch?: string | null;
+    images?: (number | Media)[] | null;
+    stock: number;
+    sku?: string | null;
+    id?: string | null;
+  }[];
+  badge?: ('none' | 'bestseller' | 'new' | 'limited') | null;
+  category: number | Category;
+  shortDescription?: string | null;
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  highlights?:
+    | {
+        text?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  ageGroup?: string | null;
+  bisNumber?: string | null;
+  tax: {
+    hsnCode: string;
+    gstRate: number;
+  };
+  shipping: {
+    weightGrams: number;
+    lengthCm: number;
+    widthCm: number;
+    heightCm: number;
+  };
+  codAllowed?: boolean | null;
+  seo?: {
+    title?: string | null;
+    description?: string | null;
+    image?: (number | null) | Media;
+  };
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -310,6 +391,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'curated';
         value: number | Curated;
+      } | null)
+    | ({
+        relationTo: 'products';
+        value: number | Product;
       } | null)
     | ({
         relationTo: 'pages';
@@ -475,9 +560,83 @@ export interface CuratedSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
   description?: T;
+  products?: T;
   order?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "products_select".
+ */
+export interface ProductsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  images?: T;
+  boxImage?: T;
+  price?: T;
+  compareAt?:
+    | T
+    | {
+        marketplace?: T;
+        price?: T;
+        url?: T;
+        checkedOn?: T;
+      };
+  marketplaceLinks?:
+    | T
+    | {
+        marketplace?: T;
+        url?: T;
+        id?: T;
+      };
+  variants?:
+    | T
+    | {
+        name?: T;
+        swatch?: T;
+        images?: T;
+        stock?: T;
+        sku?: T;
+        id?: T;
+      };
+  badge?: T;
+  category?: T;
+  shortDescription?: T;
+  description?: T;
+  highlights?:
+    | T
+    | {
+        text?: T;
+        id?: T;
+      };
+  ageGroup?: T;
+  bisNumber?: T;
+  tax?:
+    | T
+    | {
+        hsnCode?: T;
+        gstRate?: T;
+      };
+  shipping?:
+    | T
+    | {
+        weightGrams?: T;
+        lengthCm?: T;
+        widthCm?: T;
+        heightCm?: T;
+      };
+  codAllowed?: T;
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

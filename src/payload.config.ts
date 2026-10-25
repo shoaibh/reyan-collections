@@ -9,6 +9,7 @@ import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Categories } from './collections/Categories'
 import { Curated } from './collections/Curated'
+import { Products } from './collections/Products'
 import { Pages } from './collections/Pages'
 import { storagePlugins } from './lib/storage'
 
@@ -22,7 +23,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Categories, Curated, Pages],
+  collections: [Users, Media, Categories, Curated, Products, Pages],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
