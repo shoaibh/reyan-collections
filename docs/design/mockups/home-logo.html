@@ -1,0 +1,421 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700;12..96,800&display=swap" rel="stylesheet">
+
+<style>
+  .rc-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 32px; align-items: start; margin-top: 18px; }
+  @media (max-width: 1180px) { .rc-wrap { grid-template-columns: 1fr; } }
+  .rc-label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-secondary); margin: 0 0 10px; }
+  .browser { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: #fff; box-shadow: 0 18px 50px rgba(0,0,0,.12); }
+  .browser .chrome { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #ecebf3; }
+  .browser .chrome i { width: 11px; height: 11px; border-radius: 50%; background: #d0cede; display: block; }
+  .browser .chrome span { margin-left: 14px; background: #fff; border-radius: 8px; padding: 4px 14px; font: 12px/1.4 -apple-system, sans-serif; color: #555; }
+  .deskscroll { overflow-x: auto; }
+
+  .rc { --butter:#FFF6DA; --ink:#1E1B4B; --tomato:#FF5A36; --cobalt:#2D5BFF; --mint:#3CCB9A; --pink:#FF9EC7; --sun:#FFD23F; --soft:#5b5885;
+        font-family: 'Bricolage Grotesque', sans-serif; color: var(--ink); background: var(--butter); position: relative; }
+  .rc * { box-sizing: border-box; }
+  .rc h1, .rc h2, .rc h3, .rc h4, .rc p { color: inherit; font-family: inherit; }
+
+  /* ---------- shared pieces ---------- */
+  .announce { background: var(--ink); color: var(--butter); font-weight: 500; display: flex; justify-content: center; }
+  .announce i { color: var(--sun); font-style: normal; }
+  .hdr { display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-weight: 800; letter-spacing: -.04em; }
+  .logo span { color: var(--tomato); }
+  .pill { display: inline-block; background: #fff; border: 2.5px solid var(--ink); border-radius: 999px; font-weight: 700; transform: rotate(-2deg); box-shadow: 3px 3px 0 var(--ink); }
+  .hero h1 { font-weight: 800; line-height: .98; letter-spacing: -.045em; }
+  .hl { background: var(--mint); padding: 0 .16em; border-radius: .18em; display: inline-block; transform: rotate(-3deg); border: 3px solid var(--ink); }
+  .hero p { line-height: 1.5; color: #3d3a66; }
+  .ctas { display: flex; }
+  .btn { border: 3px solid var(--ink); font-weight: 800; box-shadow: 5px 5px 0 var(--ink); display: inline-block; }
+  .btn.blue { background: var(--cobalt); color: #fff; }
+  .btn.white { background: #fff; }
+  .rated { color: #3d3a66; }
+  .rated .st { color: var(--tomato); letter-spacing: 2px; }
+  .hero-r { position: relative; }
+  .blob { position: absolute; background: var(--tomato); border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; }
+  .blob2 { position: absolute; background: var(--sun); border-radius: 50%; border: 3px solid var(--ink); }
+  .pcard { position: absolute; background: #fff; border: 3px solid var(--ink); overflow: hidden; box-shadow: 8px 8px 0 var(--ink); }
+  .pcard img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .bigstk { position: absolute; z-index: 3; background: var(--pink); border: 3px solid var(--ink); border-radius: 999px; font-weight: 800; transform: rotate(10deg); }
+  .tag { position: absolute; z-index: 3; background: var(--sun); border: 3px solid var(--ink); border-radius: 12px; font-weight: 800; line-height: 1.15; transform: rotate(-4deg); box-shadow: 5px 5px 0 var(--ink); }
+  .tag::before { content: ''; position: absolute; left: 9px; top: 50%; width: 9px; height: 9px; border-radius: 50%; background: var(--butter); border: 2.5px solid var(--ink); transform: translateY(-50%); }
+  .tag s { font-weight: 500; opacity: .75; }
+  .trust { display: grid; background: #fff; border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); }
+  .trust > div { display: flex; align-items: center; font-weight: 700; line-height: 1.2; }
+  .trust small { display: block; font-weight: 400; color: var(--soft); margin-top: 2px; }
+  .trust svg { flex: none; }
+  .sec-h { display: flex; justify-content: space-between; align-items: end; }
+  .sec-h h2 { letter-spacing: -.04em; font-weight: 800; margin: 0; }
+  .sec-h span { font-weight: 700; border-bottom: 3px solid var(--tomato); }
+  .cats { display: grid; }
+  .cat { border: 3px solid var(--ink); display: flex; box-shadow: 6px 6px 0 var(--ink); }
+  .cat h3 { font-weight: 800; letter-spacing: -.04em; margin: 0 0 6px; }
+  .cat .go { display: inline-block; background: #fff; color: var(--ink); border: 2.5px solid var(--ink); border-radius: 999px; font-weight: 700; }
+  .cat .ci { border-radius: 50%; overflow: hidden; border: 3px solid var(--ink); flex: none; background: #fff; }
+  .cat .ci img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cat.toys { background: var(--cobalt); color: #fff; }
+  .cat.home { background: var(--mint); }
+  .grid { display: grid; }
+  .prod { background: #fff; border: 3px solid var(--ink); }
+  .pimg { position: relative; aspect-ratio: 1; overflow: hidden; border: 2px solid var(--ink); }
+  .pimg img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .save { position: absolute; top: 8px; left: 8px; background: var(--sun); border: 2px solid var(--ink); border-radius: 999px; font-weight: 800; transform: rotate(-4deg); }
+  .pname { font-weight: 700; line-height: 1.25; }
+  .price { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .price b { font-weight: 800; }
+  .price s { color: #6b6890; }
+  .add { display: block; text-align: center; background: var(--ink); color: var(--butter); font-weight: 700; }
+  .why { background: var(--ink); color: var(--butter); position: relative; }
+  .why .wave { position: absolute; left: 0; right: 0; top: -1px; width: 100%; display: block; }
+  .why h2 { letter-spacing: -.04em; font-weight: 800; line-height: 1; }
+  .why h2 span { color: var(--sun); }
+  .why-g { display: grid; }
+  .why-c { border: 2.5px solid rgba(255,246,218,.9); }
+  .why-c b { display: inline-block; background: var(--sun); color: var(--ink); border-radius: 999px; }
+  .why-c h4 { letter-spacing: -.02em; margin: 0 0 6px; }
+  .why-c p { margin: 0; line-height: 1.5; opacity: .85; }
+  .mk { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .mk span { border: 2px solid var(--butter); border-radius: 999px; }
+  .foot { background: var(--ink); color: rgba(255,246,218,.85); display: flex; border-top: 1px solid rgba(255,246,218,.18); }
+  .foot b { color: var(--butter); }
+  .wa { position: absolute; z-index: 5; background: #25D366; border: 3px solid var(--ink); border-radius: 50%; display: grid; place-items: center; box-shadow: 4px 4px 0 var(--ink); }
+
+  /* ---------- desktop sizes (designed at 1240px, shown at 60%) ---------- */
+  .desk { width: 1240px; zoom: .6; }
+  .desk .announce { font-size: 14px; gap: 18px; padding: 10px; }
+  .desk .hdr { padding: 22px 48px; }
+  .desk .logo { font-size: 30px; }
+  .desk nav { display: flex; gap: 26px; font-weight: 600; font-size: 16px; margin: 0 24px; }
+  .desk .hdr-r { display: flex; gap: 12px; align-items: center; }
+  .desk .search { border: 2.5px solid var(--ink); border-radius: 999px; padding: 10px 18px; font-size: 14px; color: #6b6890; background: #fff; width: 200px; }
+  .desk .cartbtn { background: var(--tomato); color: #fff; border: 2.5px solid var(--ink); border-radius: 999px; padding: 9px 18px; font-weight: 700; box-shadow: 3px 3px 0 var(--ink); display: flex; gap: 8px; align-items: center; }
+  .desk .cartbtn b { background: var(--sun); color: var(--ink); border-radius: 999px; width: 22px; height: 22px; display: inline-grid; place-items: center; font-size: 12px; border: 2px solid var(--ink); }
+  .desk .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 40px; padding: 30px 48px 60px; align-items: center; }
+  .desk .pill { padding: 7px 16px; font-size: 14px; }
+  .desk .hero h1 { font-size: 76px; margin: 22px 0 18px; }
+  .desk .hero p { font-size: 19px; max-width: 520px; margin: 0 0 28px; }
+  .desk .ctas { gap: 14px; margin-bottom: 22px; }
+  .desk .btn { border-radius: 16px; padding: 14px 26px; font-size: 18px; }
+  .desk .rated { font-size: 15px; }
+  .desk .hero-r { height: 520px; }
+  .desk .blob { width: 430px; height: 430px; right: 30px; top: 30px; }
+  .desk .blob2 { width: 140px; height: 140px; left: 0; bottom: 30px; }
+  .desk .pcard { border-radius: 26px; }
+  .desk .pc1 { width: 350px; height: 350px; right: 70px; top: 50px; transform: rotate(3deg); }
+  .desk .pc2 { width: 190px; height: 240px; left: 40px; top: 230px; transform: rotate(-6deg); }
+  .desk .bigstk { right: 40px; top: 28px; padding: 8px 16px; font-size: 16px; }
+  .desk .tag { right: 20px; bottom: 30px; padding: 12px 18px 12px 28px; font-size: 22px; }
+  .desk .tag s { font-size: 14px; }
+  .desk .trust { grid-template-columns: repeat(4, 1fr); margin: 0 48px; border-radius: 22px; }
+  .desk .trust > div { gap: 12px; padding: 20px 22px; font-size: 16px; }
+  .desk .trust > div + div { border-left: 2px dashed #c9c6e0; }
+  .desk .trust small { font-size: 13px; }
+  .desk .trust svg { width: 40px; height: 40px; }
+  .desk .sec { padding: 64px 48px 0; }
+  .desk .sec-h { margin-bottom: 24px; }
+  .desk .sec-h h2 { font-size: 46px; }
+  .desk .sec-h span { font-size: 16px; }
+  .desk .cats { grid-template-columns: 1fr 1fr; gap: 26px; }
+  .desk .cat { border-radius: 28px; padding: 28px 32px; justify-content: space-between; align-items: center; min-height: 220px; }
+  .desk .cat h3 { font-size: 42px; }
+  .desk .cat p { margin: 0 0 18px; font-size: 16px; }
+  .desk .cat .go { padding: 8px 16px; font-size: 15px; }
+  .desk .cat .ci { width: 170px; height: 170px; }
+  .desk .grid { grid-template-columns: repeat(4, 1fr); gap: 22px; }
+  .desk .prod { border-radius: 22px; padding: 12px; box-shadow: 5px 5px 0 var(--ink); }
+  .desk .pimg { border-radius: 14px; }
+  .desk .save { font-size: 13px; padding: 4px 10px; }
+  .desk .pname { font-size: 17px; margin: 14px 4px 6px; min-height: 42px; }
+  .desk .price { margin: 0 4px 14px; }
+  .desk .price b { font-size: 23px; }
+  .desk .price s { font-size: 13px; }
+  .desk .add { border-radius: 12px; padding: 11px; font-size: 15px; }
+  .desk .why { margin-top: 90px; padding: 90px 48px 60px; }
+  .desk .why h2 { font-size: 54px; margin: 0 0 36px; max-width: 720px; }
+  .desk .why-g { grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .desk .why-c { border-radius: 22px; padding: 26px; }
+  .desk .why-c b { padding: 4px 12px; font-size: 14px; margin-bottom: 14px; }
+  .desk .why-c h4 { font-size: 25px; }
+  .desk .why-c p { font-size: 15.5px; }
+  .desk .mk span { padding: 3px 10px; font-size: 13px; }
+  .desk .foot { justify-content: space-between; padding: 28px 48px 36px; font-size: 14px; line-height: 1.6; }
+  .desk .wa { right: 32px; bottom: 120px; width: 66px; height: 66px; }
+
+  /* ---------- mobile sizes ---------- */
+  .phone { width: 390px; height: 820px; border: 12px solid #15142b; border-radius: 48px; overflow: hidden; position: relative; background: #15142b; box-shadow: 0 24px 60px rgba(0,0,0,.25); margin: 0 auto; }
+  .phone .scr { height: 100%; overflow-y: auto; border-radius: 36px; scrollbar-width: none; }
+  .phone .scr::-webkit-scrollbar { display: none; }
+  .mob .announce { font-size: 11.5px; gap: 8px; padding: 30px 8px 8px; }
+  .mob .hdr { padding: 14px 18px; }
+  .mob .logo { font-size: 22px; }
+  .mob .hdr-r { display: flex; gap: 8px; }
+  .mob .ico { width: 38px; height: 38px; border-radius: 50%; border: 2.5px solid var(--ink); background: #fff; display: grid; place-items: center; position: relative; }
+  .mob .ico.cart { background: var(--tomato); box-shadow: 2px 2px 0 var(--ink); }
+  .mob .ico.cart em { position: absolute; top: -6px; right: -6px; background: var(--sun); border: 2px solid var(--ink); border-radius: 999px; font: 800 10px/1 'Bricolage Grotesque'; padding: 3px 5px; font-style: normal; }
+  .mob .hero { padding: 10px 18px 24px; }
+  .mob .pill { padding: 6px 13px; font-size: 12.5px; }
+  .mob .hero h1 { font-size: 43px; margin: 16px 0 12px; }
+  .mob .hero p { font-size: 15.5px; margin: 0 0 20px; }
+  .mob .ctas { flex-direction: column; gap: 12px; margin-bottom: 16px; }
+  .mob .btn { border-radius: 14px; padding: 13px; font-size: 17px; text-align: center; box-shadow: 4px 4px 0 var(--ink); }
+  .mob .rated { font-size: 13px; }
+  .mob .hero-r { height: 330px; margin-top: 8px; }
+  .mob .blob { width: 270px; height: 270px; right: 0; top: 20px; }
+  .mob .blob2 { width: 80px; height: 80px; left: 4px; bottom: 6px; }
+  .mob .pcard { border-radius: 20px; box-shadow: 6px 6px 0 var(--ink); }
+  .mob .pc1 { width: 220px; height: 220px; right: 22px; top: 36px; transform: rotate(3deg); }
+  .mob .pc2 { width: 118px; height: 150px; left: 14px; top: 150px; transform: rotate(-6deg); }
+  .mob .bigstk { right: 6px; top: 16px; padding: 6px 12px; font-size: 13px; }
+  .mob .tag { right: 4px; bottom: 6px; padding: 9px 13px 9px 24px; font-size: 17px; box-shadow: 4px 4px 0 var(--ink); }
+  .mob .tag s { font-size: 11.5px; }
+  .mob .trust { grid-template-columns: 1fr 1fr; margin: 0 18px; border-radius: 18px; box-shadow: 4px 4px 0 var(--ink); }
+  .mob .trust > div { gap: 8px; padding: 13px 12px; font-size: 13px; }
+  .mob .trust > div:nth-child(2n) { border-left: 2px dashed #c9c6e0; }
+  .mob .trust > div:nth-child(n+3) { border-top: 2px dashed #c9c6e0; }
+  .mob .trust small { font-size: 11px; }
+  .mob .trust svg { width: 28px; height: 28px; }
+  .mob .sec { padding: 40px 18px 0; }
+  .mob .sec-h { margin-bottom: 16px; }
+  .mob .sec-h h2 { font-size: 30px; }
+  .mob .sec-h span { font-size: 13px; }
+  .mob .cats { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .mob .cat { flex-direction: column; border-radius: 20px; padding: 14px; box-shadow: 4px 4px 0 var(--ink); }
+  .mob .cat .ci { width: 84px; height: 84px; margin-bottom: 10px; }
+  .mob .cat h3 { font-size: 21px; }
+  .mob .cat p { font-size: 12px; margin: 0 0 12px; line-height: 1.35; }
+  .mob .cat .go { padding: 5px 11px; font-size: 12px; }
+  .mob .grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .mob .prod { border-radius: 18px; padding: 8px; box-shadow: 4px 4px 0 var(--ink); }
+  .mob .pimg { border-radius: 12px; }
+  .mob .save { font-size: 10.5px; padding: 3px 7px; }
+  .mob .pname { font-size: 13.5px; margin: 10px 2px 4px; min-height: 34px; }
+  .mob .price { margin: 0 2px 10px; gap: 4px; }
+  .mob .price b { font-size: 18px; }
+  .mob .price s { font-size: 10.5px; }
+  .mob .add { border-radius: 10px; padding: 9px; font-size: 13px; }
+  .mob .why { margin-top: 56px; padding: 56px 18px 36px; }
+  .mob .why h2 { font-size: 34px; margin: 0 0 22px; }
+  .mob .why-g { grid-template-columns: 1fr; gap: 12px; }
+  .mob .why-c { border-radius: 18px; padding: 18px; }
+  .mob .why-c b { padding: 3px 10px; font-size: 12px; margin-bottom: 10px; }
+  .mob .why-c h4 { font-size: 20px; }
+  .mob .why-c p { font-size: 14px; }
+  .mob .mk span { padding: 2px 8px; font-size: 11.5px; }
+  .mob .foot { flex-direction: column; gap: 12px; padding: 24px 18px 40px; font-size: 12.5px; line-height: 1.6; }
+  .phone .wa { right: 18px; bottom: 22px; width: 54px; height: 54px; }
+
+  .logo { display: flex; align-items: center; gap: .32em; }
+  .logo .mark { height: 1.55em; width: auto; mix-blend-mode: multiply; }
+  .mob .logo { font-size: 19px; }
+  .fbrand { display: flex; gap: 16px; align-items: center; }
+  .flogo { width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--butter); flex: none; }
+  .mob .flogo { width: 64px; height: 64px; }
+  .rc-wrap { grid-template-columns: minmax(0, 1fr) 390px 390px !important; }
+  @media (max-width: 1560px) { .rc-wrap { grid-template-columns: 1fr 1fr !important; } .rc-wrap > div:first-child { grid-column: 1 / -1; } }
+  .lk { min-height: 100%; padding: 34px 22px 40px; text-align: center; background: var(--butter); position: relative; overflow: hidden; }
+  .lk .b1 { position: absolute; width: 220px; height: 220px; background: var(--tomato); border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; right: -120px; top: 250px; }
+  .lk .b2 { position: absolute; width: 140px; height: 140px; background: var(--sun); border: 3px solid var(--ink); border-radius: 50%; left: -60px; bottom: 120px; }
+  .lk .clogo { width: 150px; height: 150px; border-radius: 50%; border: 3px solid var(--ink); box-shadow: 5px 5px 0 var(--ink); position: relative; display: block; margin: 12px auto 14px; }
+  .lk h1 { font-size: 27px; font-weight: 800; letter-spacing: -.035em; margin: 0; position: relative; }
+  .lk .tl { font-size: 14px; color: #3d3a66; margin: 4px 0 6px; position: relative; }
+  .lk .deal { display: inline-block; background: var(--pink); border: 2.5px solid var(--ink); border-radius: 999px; font-weight: 800; font-size: 12.5px; padding: 4px 12px; transform: rotate(-2deg); margin: 8px 0 18px; position: relative; }
+  .lk .lb { position: relative; display: flex; align-items: center; gap: 12px; background: #fff; border: 3px solid var(--ink); border-radius: 18px; padding: 13px 16px; font-weight: 800; font-size: 16px; box-shadow: 4px 4px 0 var(--ink); margin-bottom: 14px; text-align: left; }
+  .lk .lb small { display: block; font-weight: 500; font-size: 12px; color: #5b5885; }
+  .lk .lb .ic { width: 38px; height: 38px; border-radius: 12px; border: 2.5px solid var(--ink); display: grid; place-items: center; flex: none; font-size: 15px; }
+  .lk .lb.hi { background: var(--cobalt); color: #fff; }
+  .lk .lb.hi small { color: rgba(255,255,255,.85); }
+  .lk .lb .go { margin-left: auto; font-size: 18px; }
+  .lk .fine { position: relative; font-size: 11.5px; color: #5b5885; margin-top: 18px; }
+</style>
+
+<h2>Playful Pop with your logo</h2>
+<p class="subtitle">Header: the house from your logo with "Reyan Collections". Footer and the links page (far right): your full circle logo. Left: laptop view (shrunk to fit). Right: phone view. <b>Scroll inside the phone</b> to see the whole page. Prices, ratings, GSTIN and address are placeholders. Some of the photo cropping is rough because the current images have text built into them.</p>
+
+<div class="rc-wrap">
+
+  <!-- ================= DESKTOP ================= -->
+  <div>
+    <p class="rc-label">Laptop</p>
+    <div class="browser">
+      <div class="chrome"><i></i><i></i><i></i><span>reyancollection.in</span></div>
+      <div class="deskscroll">
+        <div class="rc desk">
+          <div class="announce"><span>Cash on delivery available</span><i>✦</i><span>Dispatched within 24 hours</span><i>✦</i><span>Cheaper here than on Amazon, Flipkart &amp; Meesho</span></div>
+
+          <div class="hdr">
+            <div class="logo"><img class="mark" src="/files/logo-mark.png" alt="">Reyan Collections</div>
+            <nav><span>Toys &amp; Games</span><span>Kitchen &amp; Home</span><span>Gifts under ₹499</span></nav>
+            <div class="hdr-r"><div class="search">Search…</div><div class="cartbtn">Cart <b>2</b></div></div>
+          </div>
+
+          <div class="hero">
+            <div>
+              <span class="pill">✦ Diwali gift picks are here</span>
+              <h1>Fun for little hands. <span class="hl">Joy</span> for the whole home.</h1>
+              <p>Toys, gadgets and kitchen favourites from a small family business. The same products you know from Amazon and Flipkart, for less, with real people to talk to on WhatsApp.</p>
+              <div class="ctas"><span class="btn blue">Shop toys →</span><span class="btn white">Kitchen &amp; home</span></div>
+              <div class="rated"><span class="st">★★★★★</span> <b>4.3</b> on Amazon · <b>4.4</b> on Flipkart</div>
+            </div>
+            <div class="hero-r">
+              <div class="blob"></div><div class="blob2"></div>
+              <div class="pcard pc1"><img src="/files/p-karaoke.png" alt=""></div>
+              <div class="pcard pc2"><img src="/files/p-container.png" alt="" style="object-position:50% 100%"></div>
+              <div class="bigstk">Bestseller!</div>
+              <div class="tag">₹1,299 here<br><s>₹1,499 on Amazon</s></div>
+            </div>
+          </div>
+
+          <div class="trust">
+            <div><svg viewBox="0 0 40 40"><rect x="7" y="4" width="26" height="32" rx="4" fill="#FFD23F" stroke="#1E1B4B" stroke-width="2.5"/><path d="M13 13h14M13 19h14M13 25h8" stroke="#1E1B4B" stroke-width="2.5" stroke-linecap="round"/></svg><div>GST-registered business<small>Proper invoice with every order</small></div></div>
+            <div><svg viewBox="0 0 40 40"><rect x="3" y="10" width="34" height="21" rx="4" fill="#3CCB9A" stroke="#1E1B4B" stroke-width="2.5"/><circle cx="20" cy="20.5" r="5" fill="#fff" stroke="#1E1B4B" stroke-width="2.5"/></svg><div>Cash on delivery<small>Pay when it arrives</small></div></div>
+            <div><svg viewBox="0 0 40 40"><path d="M10 15a12 12 0 1 1-1 11" fill="none" stroke="#1E1B4B" stroke-width="2.5" stroke-linecap="round"/><path d="M5 9l5 6 6-4" fill="none" stroke="#FF5A36" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg><div>Easy 7-day returns<small>No-fuss replacements</small></div></div>
+            <div><svg viewBox="0 0 40 40"><path d="M20 4l13 5v9c0 9-6 15-13 18C13 33 7 27 7 18V9z" fill="#2D5BFF" stroke="#1E1B4B" stroke-width="2.5" stroke-linejoin="round"/><path d="M14 20l4 4 8-8" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg><div>Secure payments<small>UPI, cards, netbanking</small></div></div>
+          </div>
+
+          <div class="sec">
+            <div class="sec-h"><h2>Shop by what you need</h2></div>
+            <div class="cats">
+              <div class="cat toys"><div><h3>Toys &amp; Games</h3><p>Tracks, RC flyers, karaoke &amp; more · Ages 3+</p><span class="go">Explore toys →</span></div><div class="ci"><img src="/files/p-duck.jpg" alt="" style="object-position:30% 100%;transform:scale(1.35);transform-origin:30% 85%"></div></div>
+              <div class="cat home"><div><h3>Kitchen &amp; Home</h3><p>Storage, gadgets &amp; bath essentials</p><span class="go">Explore home →</span></div><div class="ci"><img src="/files/p-juicer.jpg" alt="" style="object-position:50% 100%;transform:scale(1.3);transform-origin:55% 85%"></div></div>
+            </div>
+          </div>
+
+          <div class="sec">
+            <div class="sec-h"><h2>This week's favourites</h2><span>See all 15 →</span></div>
+            <div class="grid">
+              <div class="prod"><div class="pimg"><img src="/files/p-karaoke.png" alt=""><span class="save">Save ₹200</span></div><div class="pname">Karaoke speaker with 2 wireless mics</div><div class="price"><b>₹1,299</b><s>₹1,499 on Amazon</s></div><span class="add">Add to cart</span></div>
+              <div class="prod"><div class="pimg"><img src="/files/p-duck.jpg" alt="" style="object-position:30% 100%;transform:scale(1.25);transform-origin:30% 90%"><span class="save">Save ₹100</span></div><div class="pname">Duck climbing track toy with music</div><div class="price"><b>₹549</b><s>₹649 on Flipkart</s></div><span class="add">Add to cart</span></div>
+              <div class="prod"><div class="pimg"><img src="/files/p-container.png" alt="" style="object-position:50% 100%"><span class="save">Save ₹100</span></div><div class="pname">Mexico premium container, set of 2</div><div class="price"><b>₹449</b><s>₹549 on Meesho</s></div><span class="add">Add to cart</span></div>
+              <div class="prod"><div class="pimg"><img src="/files/p-juicer.jpg" alt="" style="object-position:50% 100%;transform:scale(1.25);transform-origin:55% 90%"><span class="save">Save ₹150</span></div><div class="pname">Portable juicer, 400 ml, USB charging</div><div class="price"><b>₹799</b><s>₹949 on Amazon</s></div><span class="add">Add to cart</span></div>
+            </div>
+          </div>
+
+          <div class="why">
+            <svg class="wave" viewBox="0 0 1240 40" preserveAspectRatio="none"><path d="M0 0h1240v14c-52 0-52 22-103 22S1085 14 1033 14 981 36 930 36 878 14 827 14 775 36 723 36 672 14 620 14 568 36 517 36 465 14 413 14 362 36 310 36 258 14 207 14 155 36 103 36 52 14 0 14z" fill="#FFF6DA"/></svg>
+            <h2>Why buy <span>directly</span> from us?</h2>
+            <div class="why-g">
+              <div class="why-c"><b>Lower price</b><h4>No marketplace cut</h4><p>We skip the platform fees and pass the savings on to you. Same product, smaller price.</p></div>
+              <div class="why-c"><b>Real people</b><h4>Talk to us on WhatsApp</h4><p>Questions before you buy, help after it arrives. A family business, not a call centre.</p></div>
+              <div class="why-c"><b>Trusted</b><h4>Already loved on marketplaces</h4><p>The same products people already order from our stores on</p><div class="mk"><span>Amazon</span><span>Flipkart</span><span>Meesho</span></div></div>
+            </div>
+          </div>
+          <div class="foot">
+            <div class="fbrand"><img class="flogo" src="/files/logo-circle.jpg" alt=""><div><b>Reyan Collections</b><br>Daily finds • Home • Toys<br>GSTIN: your-gstin-here · Your business address, City – PIN</div></div>
+            <div>Shipping · Returns · Privacy · Terms · Contact<br>Instagram · Amazon · Flipkart · Meesho</div>
+          </div>
+          <div class="wa"><svg width="34" height="34" viewBox="0 0 34 34"><path d="M17 4C9.8 4 4 9.6 4 16.5c0 2.5.8 4.8 2.1 6.8L4.5 30l7-1.8c1.7.8 3.5 1.2 5.5 1.2 7.2 0 13-5.6 13-12.5S24.2 4 17 4z" fill="#fff" stroke="#1E1B4B" stroke-width="2.2" stroke-linejoin="round"/><path d="M12.5 12.5c.5 3.5 4 7.5 8.5 8.6l1.6-1.9-2.6-1.4-1 1.1c-1.6-.7-3.1-2.2-3.8-3.8l1.1-1-1.3-2.6z" fill="#1E1B4B"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MOBILE ================= -->
+  <div>
+    <p class="rc-label">Phone (scroll inside)</p>
+    <div class="phone">
+      <div class="scr rc mob">
+        <div class="announce"><span>Cash on delivery</span><i>✦</i><span>Ships in 24 hrs</span><i>✦</i><span>Cheaper than Amazon</span></div>
+        <div class="hdr">
+          <div class="logo"><img class="mark" src="/files/logo-mark.png" alt="">Reyan Collections</div>
+          <div class="hdr-r">
+            <div class="ico"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="7" cy="7" r="5" fill="none" stroke="#1E1B4B" stroke-width="2"/><path d="M11 11l3.5 3.5" stroke="#1E1B4B" stroke-width="2" stroke-linecap="round"/></svg></div>
+            <div class="ico cart"><svg width="17" height="17" viewBox="0 0 17 17"><path d="M2 3h2l1.6 8h8l1.4-6H5" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="7" cy="14.5" r="1.3" fill="#fff"/><circle cx="12.5" cy="14.5" r="1.3" fill="#fff"/></svg><em>2</em></div>
+          </div>
+        </div>
+
+        <div class="hero">
+          <span class="pill">✦ Diwali gift picks are here</span>
+          <h1>Fun for little hands. <span class="hl">Joy</span> for the whole home.</h1>
+          <p>Toys, gadgets and kitchen favourites from a small family business, cheaper than on the marketplaces.</p>
+          <div class="ctas"><span class="btn blue">Shop toys →</span><span class="btn white">Kitchen &amp; home</span></div>
+          <div class="rated"><span class="st">★★★★★</span> <b>4.3</b> on Amazon · <b>4.4</b> on Flipkart</div>
+          <div class="hero-r">
+            <div class="blob"></div><div class="blob2"></div>
+            <div class="pcard pc1"><img src="/files/p-karaoke.png" alt=""></div>
+            <div class="pcard pc2"><img src="/files/p-container.png" alt="" style="object-position:50% 100%"></div>
+            <div class="bigstk">Bestseller!</div>
+            <div class="tag">₹1,299 here<br><s>₹1,499 on Amazon</s></div>
+          </div>
+        </div>
+
+        <div class="trust">
+          <div><svg viewBox="0 0 40 40"><rect x="7" y="4" width="26" height="32" rx="4" fill="#FFD23F" stroke="#1E1B4B" stroke-width="2.5"/><path d="M13 13h14M13 19h14M13 25h8" stroke="#1E1B4B" stroke-width="2.5" stroke-linecap="round"/></svg><div>GST registered<small>Invoice included</small></div></div>
+          <div><svg viewBox="0 0 40 40"><rect x="3" y="10" width="34" height="21" rx="4" fill="#3CCB9A" stroke="#1E1B4B" stroke-width="2.5"/><circle cx="20" cy="20.5" r="5" fill="#fff" stroke="#1E1B4B" stroke-width="2.5"/></svg><div>Cash on delivery<small>Pay on arrival</small></div></div>
+          <div><svg viewBox="0 0 40 40"><path d="M10 15a12 12 0 1 1-1 11" fill="none" stroke="#1E1B4B" stroke-width="2.5" stroke-linecap="round"/><path d="M5 9l5 6 6-4" fill="none" stroke="#FF5A36" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg><div>7-day returns<small>No fuss</small></div></div>
+          <div><svg viewBox="0 0 40 40"><path d="M20 4l13 5v9c0 9-6 15-13 18C13 33 7 27 7 18V9z" fill="#2D5BFF" stroke="#1E1B4B" stroke-width="2.5" stroke-linejoin="round"/><path d="M14 20l4 4 8-8" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg><div>Secure UPI<small>&amp; cards</small></div></div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><h2>Shop by need</h2></div>
+          <div class="cats">
+            <div class="cat toys"><div class="ci"><img src="/files/p-duck.jpg" alt="" style="object-position:30% 100%;transform:scale(1.35);transform-origin:30% 85%"></div><h3>Toys &amp; Games</h3><p>Tracks, RC, karaoke · 3+</p><span class="go">Explore →</span></div>
+            <div class="cat home"><div class="ci"><img src="/files/p-juicer.jpg" alt="" style="object-position:50% 100%;transform:scale(1.3);transform-origin:55% 85%"></div><h3>Kitchen &amp; Home</h3><p>Storage, gadgets, bath</p><span class="go">Explore →</span></div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h"><h2>Favourites</h2><span>See all →</span></div>
+          <div class="grid">
+            <div class="prod"><div class="pimg"><img src="/files/p-karaoke.png" alt=""><span class="save">Save ₹200</span></div><div class="pname">Karaoke speaker + 2 mics</div><div class="price"><b>₹1,299</b><s>₹1,499 Amazon</s></div><span class="add">Add to cart</span></div>
+            <div class="prod"><div class="pimg"><img src="/files/p-duck.jpg" alt="" style="object-position:30% 100%;transform:scale(1.25);transform-origin:30% 90%"><span class="save">Save ₹100</span></div><div class="pname">Duck climbing track toy</div><div class="price"><b>₹549</b><s>₹649 Flipkart</s></div><span class="add">Add to cart</span></div>
+            <div class="prod"><div class="pimg"><img src="/files/p-container.png" alt="" style="object-position:50% 100%"><span class="save">Save ₹100</span></div><div class="pname">Mexico container, set of 2</div><div class="price"><b>₹449</b><s>₹549 Meesho</s></div><span class="add">Add to cart</span></div>
+            <div class="prod"><div class="pimg"><img src="/files/p-juicer.jpg" alt="" style="object-position:50% 100%;transform:scale(1.25);transform-origin:55% 90%"><span class="save">Save ₹150</span></div><div class="pname">Portable juicer 400 ml</div><div class="price"><b>₹799</b><s>₹949 Amazon</s></div><span class="add">Add to cart</span></div>
+          </div>
+        </div>
+
+        <div class="why">
+          <svg class="wave" viewBox="0 0 390 24" preserveAspectRatio="none"><path d="M0 0h390v8c-16 0-16 14-32 14S342 8 325 8s-16 14-32 14-16-14-33-14-16 14-32 14-16-14-33-14-16 14-32 14-16-14-32-14-17 14-33 14-16-14-32-14-16 14-33 14S16 8 0 8z" fill="#FFF6DA"/></svg>
+          <h2>Why buy <span>directly</span> from us?</h2>
+          <div class="why-g">
+            <div class="why-c"><b>Lower price</b><h4>No marketplace cut</h4><p>We skip platform fees and pass the savings to you.</p></div>
+            <div class="why-c"><b>Real people</b><h4>WhatsApp us anytime</h4><p>Help before and after you buy. A family business, not a call centre.</p></div>
+            <div class="why-c"><b>Trusted</b><h4>Loved on marketplaces</h4><p>The same products people order from our stores on</p><div class="mk"><span>Amazon</span><span>Flipkart</span><span>Meesho</span></div></div>
+          </div>
+        </div>
+        <div class="foot">
+          <div class="fbrand"><img class="flogo" src="/files/logo-circle.jpg" alt=""><div><b>Reyan Collections</b><br>Daily finds • Home • Toys<br>GSTIN: your-gstin-here</div></div>
+          <div>Shipping · Returns · Privacy · Terms · Contact</div>
+        </div>
+      </div>
+      <div class="wa"><svg width="28" height="28" viewBox="0 0 34 34"><path d="M17 4C9.8 4 4 9.6 4 16.5c0 2.5.8 4.8 2.1 6.8L4.5 30l7-1.8c1.7.8 3.5 1.2 5.5 1.2 7.2 0 13-5.6 13-12.5S24.2 4 17 4z" fill="#fff" stroke="#1E1B4B" stroke-width="2.2" stroke-linejoin="round"/><path d="M12.5 12.5c.5 3.5 4 7.5 8.5 8.6l1.6-1.9-2.6-1.4-1 1.1c-1.6-.7-3.1-2.2-3.8-3.8l1.1-1-1.3-2.6z" fill="#1E1B4B"/></svg></div>
+    </div>
+  </div>
+
+  <!-- ================= LINKS PAGE ================= -->
+  <div>
+    <p class="rc-label">Links page (/links)</p>
+    <div class="phone">
+      <div class="scr rc">
+        <div class="lk">
+          <div class="b1"></div><div class="b2"></div>
+          <img class="clogo" src="/files/logo-circle.jpg" alt="Reyan Collections logo">
+          <h1>Reyan Collections</h1>
+          <p class="tl">Daily finds • Home • Toys</p>
+          <span class="deal">Diwali offer: save up to ₹200 on our website</span>
+          <div class="lb hi"><span class="ic" style="background:var(--sun);color:var(--ink)">★</span><div>Shop on our website<small>Lowest prices · COD available</small></div><span class="go">→</span></div>
+          <div class="lb"><span class="ic" style="background:#25D366;color:#fff">✆</span><div>Chat on WhatsApp<small>Ask us anything</small></div><span class="go">→</span></div>
+          <div class="lb"><span class="ic" style="background:var(--sun)">A</span><div>Amazon store<small>★ 4.3 rating</small></div><span class="go">→</span></div>
+          <div class="lb"><span class="ic" style="background:var(--cobalt);color:#fff">F</span><div>Flipkart store</div><span class="go">→</span></div>
+          <div class="lb"><span class="ic" style="background:var(--pink)">M</span><div>Meesho store</div><span class="go">→</span></div>
+          <p class="fine">GST-registered business · Ships across India</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Scale the 1240px-wide laptop design to whatever width its frame has.
+  (function () {
+    function fit() {
+      document.querySelectorAll('.deskscroll').forEach(function (s) {
+        s.firstElementChild.style.zoom = Math.min(1, s.clientWidth / 1240);
+      });
+    }
+    window.addEventListener('resize', fit);
+    fit();
+  })();
+</script>

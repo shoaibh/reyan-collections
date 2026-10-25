@@ -1,0 +1,207 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  .ad-wrap { display: flex; gap: 36px; flex-wrap: wrap; justify-content: center; margin: 18px 0 40px; }
+  .ad-col { display: flex; flex-direction: column; align-items: center; }
+  .ad-cap { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-secondary); margin: 0 0 10px; }
+  .ad-phone { width: 370px; height: 780px; border: 11px solid #17172b; border-radius: 46px; overflow: hidden; background: #17172b; box-shadow: 0 24px 60px rgba(0,0,0,.22); position: relative; }
+  .ad { height: 100%; overflow-y: auto; border-radius: 35px; background: #F4F4F7; font-family: 'Inter', sans-serif; color: #18182a; font-size: 13px; scrollbar-width: none; padding-bottom: 76px; }
+  .ad::-webkit-scrollbar { display: none; }
+  .ad * { box-sizing: border-box; }
+  .ad h3, .ad h4, .ad p { color: inherit; font-family: inherit; margin: 0; }
+  .ad-top { display: flex; justify-content: space-between; align-items: center; padding: 34px 18px 10px; }
+  .ad-logo { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -.03em; color: #1E1B4B; }
+  .ad-logo span { color: #FF5A36; }
+  .ad-logo small { font-family: 'Inter'; font-weight: 600; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: #8a8aa0; margin-left: 6px; }
+  .ad-av { width: 30px; height: 30px; border-radius: 50%; background: #1E1B4B; color: #FFF6DA; display: grid; place-items: center; font-weight: 700; font-size: 12px; }
+  .ad-h { padding: 6px 18px 12px; }
+  .ad-h p { color: #6c6c84; font-size: 12.5px; }
+  .ad-h h3 { font-size: 24px; font-weight: 700; letter-spacing: -.02em; margin-top: 2px; }
+  .ad-week { margin: 0 14px 14px; background: #1E1B4B; color: #FFF6DA; border-radius: 16px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: end; }
+  .ad-week b { font-size: 22px; letter-spacing: -.02em; display: block; }
+  .ad-week small { opacity: .75; font-size: 11.5px; }
+  .ad-week .chips { display: flex; gap: 6px; }
+  .ad-week .chips span { background: rgba(255,246,218,.14); border-radius: 999px; padding: 3px 8px; font-size: 11px; }
+  .card { background: #fff; margin: 0 14px 12px; border-radius: 16px; padding: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.05); border-left: 4px solid #ccc; }
+  .card.amber { border-left-color: #F5A524; }
+  .card.blue { border-left-color: #2D5BFF; }
+  .card.red { border-left-color: #E5484D; }
+  .card.green { border-left-color: #2BB673; }
+  .card-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .card-h h4 { font-size: 14px; font-weight: 700; }
+  .count { background: #F4F4F7; border-radius: 999px; padding: 2px 9px; font-weight: 700; font-size: 12px; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 0; border-top: 1px solid #EFEFF3; }
+  .row:first-of-type { border-top: 0; }
+  .row .meta b { display: block; font-size: 13px; }
+  .row .meta small { color: #6c6c84; font-size: 11.5px; }
+  .acts { display: flex; gap: 6px; flex: none; }
+  .wa-btn { background: #25D366; color: #fff; border-radius: 10px; padding: 7px 10px; font-weight: 600; font-size: 12px; display: flex; gap: 5px; align-items: center; }
+  .ok-btn { background: #F4F4F7; border-radius: 10px; padding: 7px 10px; font-weight: 600; font-size: 12px; }
+  .pri-btn { background: #1E1B4B; color: #fff; border-radius: 10px; padding: 7px 10px; font-weight: 600; font-size: 12px; }
+  .link { color: #2D5BFF; font-weight: 600; font-size: 12.5px; }
+  .tabs { position: absolute; left: 11px; right: 11px; bottom: 11px; height: 66px; background: #fff; border-top: 1px solid #E6E6EC; border-radius: 0 0 35px 35px; display: flex; justify-content: space-around; align-items: center; padding-bottom: 8px; font-family: 'Inter'; }
+  .tabs span { font-size: 10.5px; color: #8a8aa0; display: flex; flex-direction: column; align-items: center; gap: 4px; font-weight: 500; }
+  .tabs span i { width: 20px; height: 20px; border-radius: 6px; background: #E6E6EC; display: block; }
+  .tabs span.on { color: #1E1B4B; font-weight: 700; }
+  .tabs span.on i { background: #FF5A36; }
+
+  .od-top { display: flex; align-items: center; gap: 10px; padding: 34px 18px 8px; }
+  .od-top .back { width: 30px; height: 30px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-weight: 700; }
+  .od-top h3 { font-size: 18px; font-weight: 700; }
+  .pill { display: inline-block; border-radius: 999px; padding: 3px 10px; font-weight: 600; font-size: 11.5px; }
+  .pill.amber { background: #FFF1D6; color: #9A6200; }
+  .steps { display: flex; margin: 10px 4px 2px; }
+  .steps div { flex: 1; text-align: center; font-size: 10.5px; color: #8a8aa0; position: relative; padding-top: 18px; }
+  .steps div::before { content: ''; position: absolute; top: 4px; left: 50%; transform: translateX(-50%); width: 11px; height: 11px; border-radius: 50%; background: #D8D8E0; z-index: 1; }
+  .steps div::after { content: ''; position: absolute; top: 9px; left: -50%; width: 100%; height: 2px; background: #D8D8E0; }
+  .steps div:first-child::after { display: none; }
+  .steps div.done { color: #18182a; font-weight: 600; }
+  .steps div.done::before { background: #2BB673; }
+  .steps div.done::after { background: #2BB673; }
+  .steps div.now::before { background: #F5A524; box-shadow: 0 0 0 4px #FFF1D6; }
+  .kv { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12.5px; }
+  .kv span:first-child { color: #6c6c84; }
+  .kv.total { border-top: 1px solid #EFEFF3; margin-top: 4px; padding-top: 9px; font-weight: 700; font-size: 14px; }
+  .ok-note { margin-top: 8px; background: #E9F9F0; color: #17794A; border-radius: 10px; padding: 7px 10px; font-size: 11.5px; font-weight: 600; }
+  .bigbtn { display: flex; justify-content: center; align-items: center; gap: 8px; border-radius: 14px; padding: 13px; font-weight: 700; font-size: 14px; margin-top: 8px; }
+  .bigbtn.wa { background: #25D366; color: #fff; }
+  .bigbtn.dark { background: #1E1B4B; color: #fff; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .two span { background: #F4F4F7; border-radius: 12px; padding: 10px; text-align: center; font-weight: 600; font-size: 12.5px; }
+  .cancel { text-align: center; color: #E5484D; font-weight: 600; font-size: 12.5px; margin-top: 12px; }
+  .msg { background: #E7FFDB; border-radius: 12px 12px 12px 2px; padding: 10px 12px; font-size: 12px; line-height: 1.45; color: #1f3a17; margin-top: 8px; }
+  .msg small { display: block; color: #6c8a60; font-size: 10.5px; margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+
+  /* architecture */
+  .arch { max-width: 1060px; margin: 0 auto 20px; }
+  .arch h3 { margin-bottom: 4px; }
+  .lanes { display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 18px; margin-top: 16px; align-items: stretch; }
+  .lane { border-radius: 18px; padding: 16px; border: 1.5px dashed var(--border); }
+  .lane > .lt { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; margin-bottom: 10px; }
+  .box { background: var(--bg-secondary); border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; }
+  .box b { display: block; font-size: 13.5px; margin-bottom: 2px; }
+  .box small { color: var(--text-secondary); font-size: 12px; line-height: 1.4; display: block; }
+  .box .cost { display: inline-block; margin-top: 6px; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #E9F9F0; color: #17794A; }
+  .box .cost.paid { background: #FFF1D6; color: #9A6200; }
+  .box.core { border: 2px solid #1E1B4B; }
+  .lane.mid { border-color: #1E1B4B; border-style: solid; }
+  .arrow { text-align: center; color: var(--text-secondary); font-size: 12px; margin: -4px 0 6px; }
+  .total { margin-top: 14px; text-align: center; font-size: 14px; }
+  .total b { font-size: 16px; }
+</style>
+
+<h2>Your admin dashboard (on your phone) and where everything runs</h2>
+<p class="subtitle">Left: the "Today" screen you open each morning. Right: tapping a COD order. Scroll inside both phones. Names and numbers are made up. Below: the hosting setup and its monthly cost.</p>
+
+<div class="ad-wrap">
+
+  <div class="ad-col">
+    <p class="ad-cap">Today screen</p>
+    <div class="ad-phone">
+      <div class="ad">
+        <div class="ad-top"><div class="ad-logo">reyan<span>.</span>collection<small>admin</small></div><div class="ad-av">S</div></div>
+        <div class="ad-h"><p>Good evening, Shoaib</p><h3>3 things need you</h3></div>
+        <div class="ad-week"><div><small>This week</small><b>₹12,480</b><small>14 orders</small></div><div class="chips"><span>9 prepaid</span><span>5 COD</span></div></div>
+
+        <div class="card amber">
+          <div class="card-h"><h4>Confirm COD orders</h4><span class="count">3</span></div>
+          <div class="row"><div class="meta"><b>#1042 · Priya S.</b><small>Duck track toy · ₹598 · 2h ago</small></div><div class="acts"><span class="wa-btn">WhatsApp</span><span class="ok-btn">✓</span></div></div>
+          <div class="row"><div class="meta"><b>#1041 · Rahul M.</b><small>Karaoke speaker · ₹1,348 · 5h ago</small></div><div class="acts"><span class="wa-btn">WhatsApp</span><span class="ok-btn">✓</span></div></div>
+          <div class="row"><div class="meta"><b>#1038 · Anjali K.</b><small>Juicer · ₹848 · 21h ago · auto-cancels in 3h</small></div><div class="acts"><span class="wa-btn">WhatsApp</span><span class="ok-btn">✓</span></div></div>
+        </div>
+
+        <div class="card blue">
+          <div class="card-h"><h4>Ready to ship</h4><span class="count">2</span></div>
+          <div class="row"><div class="meta"><b>#1040 · Karaoke speaker</b><small>Prepaid · Lucknow 226010</small></div><div class="acts"><span class="pri-btn">Ship</span></div></div>
+          <div class="row"><div class="meta"><b>#1039 · Container ×2</b><small>COD confirmed · Pune 411001</small></div><div class="acts"><span class="pri-btn">Ship</span></div></div>
+          <div class="row"><span class="link">Print all packing slips →</span></div>
+        </div>
+
+        <div class="card red">
+          <div class="card-h"><h4>Low stock</h4><span class="count">1</span></div>
+          <div class="row"><div class="meta"><b>Mexico container</b><small>2 left · selling ~1/day</small></div><div class="acts"><span class="ok-btn">Update</span></div></div>
+        </div>
+
+        <div class="card green">
+          <div class="card-h"><h4>On the way</h4><span class="count">5</span></div>
+          <div class="row"><div class="meta"><b>4 in transit · 1 out for delivery</b><small>Tracking updates come from Shiprocket</small></div><span class="link">View</span></div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h4>Quick actions</h4></div>
+          <div class="two"><span>+ Add product</span><span>Edit homepage</span><span>Edit links page</span><span>Store settings</span></div>
+        </div>
+      </div>
+      <div class="tabs"><span class="on"><i></i>Today</span><span><i></i>Orders</span><span><i></i>Products</span><span><i></i>Content</span><span><i></i>Settings</span></div>
+    </div>
+  </div>
+
+  <div class="ad-col">
+    <p class="ad-cap">Order detail (COD)</p>
+    <div class="ad-phone">
+      <div class="ad">
+        <div class="od-top"><span class="back">‹</span><div><h3>Order #1042</h3><span class="pill amber">Awaiting confirmation</span></div></div>
+        <div class="card">
+          <div class="steps"><div class="done">Placed</div><div class="now">Confirm</div><div>Ship</div><div>Delivered</div></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h4>Customer</h4></div>
+          <div class="kv"><span>Name</span><span>Priya Sharma</span></div>
+          <div class="kv"><span>Phone</span><span>+91 98••• ••421</span></div>
+          <div class="kv"><span>Address</span><span>Gomti Nagar, Lucknow 226010</span></div>
+          <div class="ok-note">✓ Couriers deliver here · COD allowed · not on blocklist</div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h4>Items</h4></div>
+          <div class="kv"><span>Duck climbing track toy × 1</span><span>₹549</span></div>
+          <div class="kv"><span>Shipping</span><span>₹49</span></div>
+          <div class="kv total"><span>Cash on delivery</span><span>₹598</span></div>
+        </div>
+        <div class="card amber">
+          <div class="card-h"><h4>Next step</h4></div>
+          <div class="bigbtn wa">Confirm on WhatsApp</div>
+          <div class="msg"><small>Message that opens, ready to send</small>Hi Priya! This is Reyan Collection. You ordered a Duck climbing track toy (₹598, cash on delivery) to Lucknow 226010. Reply YES to confirm and we'll ship it today.</div>
+          <div class="bigbtn dark">She replied YES · Mark confirmed</div>
+          <div class="two"><span>Packing slip</span><span>GST invoice</span></div>
+          <div class="cancel">Cancel order</div>
+        </div>
+      </div>
+      <div class="tabs"><span><i></i>Today</span><span class="on"><i></i>Orders</span><span><i></i>Products</span><span><i></i>Content</span><span><i></i>Settings</span></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="arch">
+  <h3>Where everything runs</h3>
+  <p class="subtitle">One app does everything: the shop, the admin and the backend. A few free services handle the jobs we shouldn't build ourselves.</p>
+  <div class="lanes">
+    <div class="lane">
+      <div class="lt">People</div>
+      <div class="box"><b>Customers</b><small>Arrive from Instagram via /links on their phones</small></div>
+      <div class="arrow">↓ every visit passes through</div>
+      <div class="box"><b>Cloudflare</b><small>DNS for reyancollection.in, speed cache, bot check at checkout (Turnstile), hello@ email forwarding, visitor stats</small><span class="cost">Free</span></div>
+      <div class="box"><b>You</b><small>Admin at reyancollection.in/admin, on your phone or laptop</small></div>
+    </div>
+    <div class="lane mid">
+      <div class="lt">Your app on Railway (Singapore)</div>
+      <div class="box core"><b>Next.js + Payload: one app, one deploy</b><small>
+        <b style="display:inline;font-size:12px">Shop:</b> pages are pre-built and refresh when you publish, so they load fast<br>
+        <b style="display:inline;font-size:12px">Admin:</b> Payload's dashboard plus our custom "Today" screen<br>
+        <b style="display:inline;font-size:12px">Backend:</b> checkout, prices recalculated on the server, stock reserved, payment webhooks, GST invoices<br>
+        <b style="display:inline;font-size:12px">Scheduled jobs:</b> every 15 minutes, cancel expired orders and return their stock</small></div>
+      <div class="box core"><b>Postgres database</b><small>Products, orders, settings. Same Railway project, on a private network. Nightly backup copied to R2.</small></div>
+      <span class="cost paid" style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#FFF1D6;color:#9A6200">≈ $5–8 / month for both (₹450–700)</span>
+    </div>
+    <div class="lane">
+      <div class="lt">Services we plug in</div>
+      <div class="box"><b>Cloudflare R2</b><small>Product photos (resized copies made on upload) and backups</small><span class="cost">Free up to 10 GB</span></div>
+      <div class="box"><b>Razorpay</b><small>UPI, cards, netbanking. Card details never touch our server.</small><span class="cost paid">~2% per prepaid order</span></div>
+      <div class="box"><b>Shiprocket</b><small>Pincode check, courier booking, tracking updates</small><span class="cost paid">Pay per parcel</span></div>
+      <div class="box"><b>Resend</b><small>Order and shipping emails</small><span class="cost">Free up to 3,000/month</span></div>
+    </div>
+  </div>
+  <p class="total">Fixed monthly cost: <b>about ₹450–700</b>, compared with about ₹1,770 + 2% per order on Shopify Basic.</p>
+</div>
