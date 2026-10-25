@@ -22,7 +22,8 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  reporter: [['html', { open: 'never' }]],
+  globalSetup: './tests/e2e/global-setup.ts',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
@@ -41,6 +42,7 @@ export default defineConfig({
     command: 'pnpm dev --port 3100',
     env: { DATABASE_URI: TEST_DATABASE_URI },
     reuseExistingServer: !process.env.CI,
-    url: 'http://localhost:3100',
+    // A static asset: readiness polling must not open DB connections before global setup resets the DB
+    url: 'http://localhost:3100/brand/logo-mark.png',
   },
 })
