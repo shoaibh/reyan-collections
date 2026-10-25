@@ -6,7 +6,9 @@ import { defineConfig, devices } from '@playwright/test'
  */
 import 'dotenv/config'
 
-const TEST_DATABASE_URI = 'postgres://shoaibhamza@localhost:5432/reyan_test'
+import { testDbUri } from './tests/helpers/testDbUri'
+
+const TEST_DATABASE_URI = testDbUri()
 // Seed helpers and the test server both run against the test database
 process.env.DATABASE_URI = TEST_DATABASE_URI
 

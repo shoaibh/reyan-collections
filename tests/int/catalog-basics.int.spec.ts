@@ -43,7 +43,7 @@ describe('Catalog basics', () => {
         data: { title: 'Toys and Games', slug: 'toys-and-games', tileColor: 'mint' },
         overrideAccess: true,
       }),
-    ).rejects.toThrow()
+    ).rejects.toThrow(/field is invalid: slug/)
   })
 
   it('keeps the slug on a partial update', async () => {

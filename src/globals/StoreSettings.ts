@@ -1,6 +1,6 @@
 import type { Field, GlobalConfig, NumberFieldValidation } from 'payload'
 
-import { isAdmin } from '../access/isAdmin'
+import { isAdmin, isAdminField } from '../access/isAdmin'
 import { wholeNumber } from '../lib/validators'
 
 const rating: NumberFieldValidation = (value) => {
@@ -38,11 +38,12 @@ export const StoreSettings: GlobalConfig = {
         { name: 'legalName', type: 'text' },
         { name: 'gstin', type: 'text' },
         { name: 'address', type: 'group', fields: addressFields() },
-        { name: 'pickupSameAsBusiness', type: 'checkbox', defaultValue: true },
+        { name: 'pickupSameAsBusiness', type: 'checkbox', defaultValue: true, access: { read: isAdminField } },
         {
           name: 'pickupAddress',
           type: 'group',
           fields: addressFields(),
+          access: { read: isAdminField },
           admin: {
             condition: (_data, siblingData) =>
               (siblingData as { pickupSameAsBusiness?: boolean } | undefined)?.pickupSameAsBusiness === false,

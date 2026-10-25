@@ -1,6 +1,7 @@
 import type { GlobalConfig } from 'payload'
 
 import { isAdmin } from '../access/isAdmin'
+import { publishedOrAdmin } from '../access/publishedOrAdmin'
 
 const cta = (name: string) => ({
   name,
@@ -15,7 +16,7 @@ export const Homepage: GlobalConfig = {
   slug: 'homepage',
   label: 'Homepage',
   access: {
-    read: () => true,
+    read: publishedOrAdmin,
     update: isAdmin,
   },
   versions: { drafts: true },

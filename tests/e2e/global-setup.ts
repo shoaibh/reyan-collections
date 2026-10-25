@@ -1,6 +1,8 @@
 import { execSync } from 'node:child_process'
 
-const TEST_DATABASE_URI = 'postgres://shoaibhamza@localhost:5432/reyan_test'
+import { testDbUri } from '../helpers/testDbUri'
+
+const TEST_DATABASE_URI = testDbUri()
 
 /**
  * Resets the test database and seeds it through Payload's local API (`pnpm seed`).

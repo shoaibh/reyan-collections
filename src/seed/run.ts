@@ -2,11 +2,14 @@ import { getPayload } from 'payload'
 
 import config from '@/payload.config'
 
+import { assertSeedAllowed } from './guard'
 import { seed } from './index'
 
 // `payload run` imports this file, so the work must finish via top-level await.
-if (process.env.NODE_ENV === 'production' && process.env.SEED_FORCE !== '1') {
-  console.error('Refusing to seed in production. Set SEED_FORCE=1 to override.')
+try {
+  assertSeedAllowed(process.env)
+} catch (error) {
+  console.error(error instanceof Error ? error.message : error)
   process.exit(1)
 }
 

@@ -2,6 +2,7 @@ import path from 'node:path'
 import type { Payload } from 'payload'
 
 import { announcements, heroData, linksData, seedCategories, seedProducts } from './data'
+import { assertSeedAllowed } from './guard'
 import { lexicalDoc } from './lexical'
 import { seedPages } from './pages'
 
@@ -46,6 +47,7 @@ async function upsertAdmin(payload: Payload) {
 }
 
 export async function seed(payload: Payload): Promise<{ products: number; categories: number }> {
+  assertSeedAllowed(process.env)
   // Fail fast, before wiping anything, if credentials are missing.
   if (!process.env.SEED_ADMIN_EMAIL || !process.env.SEED_ADMIN_PASSWORD) {
     throw new Error('SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD must be set to run the seed')

@@ -282,6 +282,7 @@ export interface Product {
     images?: (number | Media)[] | null;
     stock: number;
     sku?: string | null;
+    stockAtLoad?: number | null;
     id?: string | null;
   }[];
   badge?: ('none' | 'bestseller' | 'new' | 'limited') | null;
@@ -608,6 +609,7 @@ export interface ProductsSelect<T extends boolean = true> {
         images?: T;
         stock?: T;
         sku?: T;
+        stockAtLoad?: T;
         id?: T;
       };
   badge?: T;
