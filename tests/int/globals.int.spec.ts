@@ -40,6 +40,16 @@ describe('Globals', () => {
     )
   })
 
+  it('requires the relation for the chosen linkType', async () => {
+    await expectValidationError(() =>
+      payload.updateGlobal({
+        slug: 'navigation',
+        data: { items: [{ label: 'Toys', linkType: 'category' }] } as never,
+        overrideAccess: true,
+      }),
+    )
+  })
+
   it('caps announcements at 3', async () => {
     const announcement = Array.from({ length: 4 }, (_, i) => ({ text: `Announcement ${i + 1}` }))
     await expectValidationError(() =>

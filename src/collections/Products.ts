@@ -1,23 +1,11 @@
-import type { CollectionConfig, Field, NumberFieldValidation } from 'payload'
+import type { CollectionConfig, Field } from 'payload'
 
 import { isAdmin } from '../access/isAdmin'
 import { publishedOrAdmin } from '../access/publishedOrAdmin'
 import { slugField } from '../fields/slug'
+import { wholeNumber } from '../lib/validators'
 
 const marketplaceOptions = ['amazon', 'flipkart', 'meesho']
-
-const wholeNumber =
-  (min: number, unit = 'rupees'): NumberFieldValidation =>
-  (value, { required }) => {
-    if (value === undefined || value === null) {
-      return required ? 'This field is required.' : true
-    }
-    if (typeof value !== 'number' || !Number.isInteger(value)) {
-      return `Must be a whole number of ${unit}`
-    }
-    if (value < min) return `Must be at least ${min}`
-    return true
-  }
 
 const requiredWithComparePrice = (label: string) => (value: unknown, { siblingData }: { siblingData: unknown }) => {
   const price = (siblingData as { price?: number | null } | undefined)?.price
