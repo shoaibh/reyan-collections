@@ -2,6 +2,7 @@ import { APIError, type CollectionConfig } from 'payload'
 
 import { isAdmin } from '../access/isAdmin'
 import { slugField } from '../fields/slug'
+import { revalidate } from '../lib/revalidate'
 
 export const Categories: CollectionConfig = {
   slug: 'categories',
@@ -16,6 +17,18 @@ export const Categories: CollectionConfig = {
     delete: isAdmin,
   },
   hooks: {
+    afterChange: [
+      ({ doc }) => {
+        revalidate(['categories', 'products'])
+        return doc
+      },
+    ],
+    afterDelete: [
+      ({ doc }) => {
+        revalidate(['categories', 'products'])
+        return doc
+      },
+    ],
     beforeDelete: [
       async ({ id, req }) => {
         const { totalDocs } = await req.payload.count({

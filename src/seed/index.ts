@@ -12,7 +12,7 @@ const CHECKED_ON = '2026-10-26'
 const FAVOURITES_TITLE = "This week's favourites"
 const GIFTS_TITLE = 'Gifts under ₹499'
 
-async function wipe(payload: Payload) {
+export async function wipe(payload: Payload) {
   // Clear global relations first so nothing references the docs being deleted.
   await payload.updateGlobal({ slug: 'navigation', data: { items: [] } })
   await payload.updateGlobal({

@@ -1,9 +1,18 @@
 import type { GlobalConfig } from 'payload'
 
 import { isAdmin } from '../access/isAdmin'
+import { revalidate } from '../lib/revalidate'
 
 export const LinksPage: GlobalConfig = {
   slug: 'links-page',
+  hooks: {
+    afterChange: [
+      ({ doc }) => {
+        revalidate(['global:links-page'])
+        return doc
+      },
+    ],
+  },
   label: 'Links Page',
   access: {
     read: () => true,

@@ -3,6 +3,7 @@ import type { CollectionConfig } from 'payload'
 import { isAdmin } from '../access/isAdmin'
 import { publishedOrAdmin } from '../access/publishedOrAdmin'
 import { slugField } from '../fields/slug'
+import { revalidate } from '../lib/revalidate'
 
 export const Pages: CollectionConfig = {
   slug: 'pages',
@@ -17,6 +18,23 @@ export const Pages: CollectionConfig = {
     create: isAdmin,
     update: isAdmin,
     delete: isAdmin,
+  },
+  hooks: {
+    afterChange: [
+      ({ doc, previousDoc }) => {
+        const tags = ['pages']
+        if (doc?.slug) tags.push(`page:${doc.slug}`)
+        if (previousDoc?.slug && previousDoc.slug !== doc?.slug) tags.push(`page:${previousDoc.slug}`)
+        revalidate(tags)
+        return doc
+      },
+    ],
+    afterDelete: [
+      ({ doc }) => {
+        revalidate(['pages', ...(doc?.slug ? [`page:${doc.slug}`] : [])])
+        return doc
+      },
+    ],
   },
   fields: [
     {

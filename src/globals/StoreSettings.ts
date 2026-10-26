@@ -2,6 +2,7 @@ import type { Field, GlobalConfig, NumberFieldValidation } from 'payload'
 
 import { isAdmin, isAdminField } from '../access/isAdmin'
 import { wholeNumber } from '../lib/validators'
+import { revalidate } from '../lib/revalidate'
 
 const rating: NumberFieldValidation = (value) => {
   if (value === undefined || value === null) return true
@@ -24,6 +25,14 @@ const addressFields = (): Field[] => [
 
 export const StoreSettings: GlobalConfig = {
   slug: 'store-settings',
+  hooks: {
+    afterChange: [
+      ({ doc }) => {
+        revalidate(['global:store-settings'])
+        return doc
+      },
+    ],
+  },
   label: 'Store Settings',
   access: {
     read: () => true,

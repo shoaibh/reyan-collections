@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { isAdmin } from '../access/isAdmin'
 import { slugField } from '../fields/slug'
+import { revalidate } from '../lib/revalidate'
 
 export const Curated: CollectionConfig = {
   slug: 'curated',
@@ -17,6 +18,20 @@ export const Curated: CollectionConfig = {
     create: isAdmin,
     update: isAdmin,
     delete: isAdmin,
+  },
+  hooks: {
+    afterChange: [
+      ({ doc }) => {
+        revalidate(['curated'])
+        return doc
+      },
+    ],
+    afterDelete: [
+      ({ doc }) => {
+        revalidate(['curated'])
+        return doc
+      },
+    ],
   },
   fields: [
     {

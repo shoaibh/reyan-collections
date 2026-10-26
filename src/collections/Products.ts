@@ -1,8 +1,15 @@
-import type { CollectionBeforeChangeHook, CollectionConfig, Field } from 'payload'
+import type {
+  CollectionAfterChangeHook,
+  CollectionAfterDeleteHook,
+  CollectionBeforeChangeHook,
+  CollectionConfig,
+  Field,
+} from 'payload'
 
 import { isAdmin } from '../access/isAdmin'
 import { publishedOrAdmin } from '../access/publishedOrAdmin'
 import { slugField } from '../fields/slug'
+import { revalidate } from '../lib/revalidate'
 import { wholeNumber } from '../lib/validators'
 
 const marketplaceOptions = ['amazon', 'flipkart', 'meesho']
@@ -55,13 +62,30 @@ const protectVariantStock: CollectionBeforeChangeHook = ({ data, originalDoc, op
   return data
 }
 
+const revalidateProduct: CollectionAfterChangeHook = ({ doc, previousDoc }) => {
+  const tags = ['products']
+  if (doc?.slug) tags.push(`product:${doc.slug}`)
+  if (previousDoc?.slug && previousDoc.slug !== doc?.slug) tags.push(`product:${previousDoc.slug}`)
+  revalidate(tags)
+  return doc
+}
+
+const revalidateProductDelete: CollectionAfterDeleteHook = ({ doc }) => {
+  revalidate(['products', ...(doc?.slug ? [`product:${doc.slug}`] : [])])
+  return doc
+}
+
 export const Products: CollectionConfig = {
   slug: 'products',
   admin: {
     useAsTitle: 'title',
   },
   versions: { drafts: true },
-  hooks: { beforeChange: [protectVariantStock] },
+  hooks: {
+    beforeChange: [protectVariantStock],
+    afterChange: [revalidateProduct],
+    afterDelete: [revalidateProductDelete],
+  },
   access: {
     read: publishedOrAdmin,
     create: isAdmin,

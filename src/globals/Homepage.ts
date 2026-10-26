@@ -2,6 +2,7 @@ import type { GlobalConfig } from 'payload'
 
 import { isAdmin } from '../access/isAdmin'
 import { publishedOrAdmin } from '../access/publishedOrAdmin'
+import { revalidate } from '../lib/revalidate'
 
 const cta = (name: string) => ({
   name,
@@ -14,6 +15,14 @@ const cta = (name: string) => ({
 
 export const Homepage: GlobalConfig = {
   slug: 'homepage',
+  hooks: {
+    afterChange: [
+      ({ doc }) => {
+        revalidate(['global:homepage'])
+        return doc
+      },
+    ],
+  },
   label: 'Homepage',
   access: {
     read: publishedOrAdmin,

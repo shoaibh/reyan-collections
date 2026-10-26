@@ -1,6 +1,6 @@
 import { getPayload, Payload } from 'payload'
 import config from '@/payload.config'
-import { seed } from '@/seed'
+import { seed, wipe } from '@/seed'
 
 import { describe, it, beforeAll, afterAll, expect } from 'vitest'
 
@@ -12,14 +12,7 @@ beforeAll(async () => {
 
 // Other int specs assume an empty catalog, so remove the seeded docs afterwards.
 afterAll(async () => {
-  await payload.updateGlobal({ slug: 'navigation', data: { items: [] } })
-  await payload.updateGlobal({
-    slug: 'homepage',
-    data: { hero: { headline: 'x', productA: null, productB: null }, favouritesCollection: null },
-  })
-  for (const collection of ['curated', 'products', 'categories', 'pages', 'media'] as const) {
-    await payload.delete({ collection, where: { id: { exists: true } } })
-  }
+  await wipe(payload)
 })
 
 describe('Seed', () => {

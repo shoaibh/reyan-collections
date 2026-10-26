@@ -1,6 +1,7 @@
 import type { GlobalConfig, RelationshipFieldValidation } from 'payload'
 
 import { isAdmin } from '../access/isAdmin'
+import { revalidate } from '../lib/revalidate'
 
 const requiredForType =
   (linkType: string, label: string): RelationshipFieldValidation =>
@@ -17,6 +18,14 @@ const showFor = (linkType: string) => (_data: unknown, siblingData: unknown) =>
 
 export const Navigation: GlobalConfig = {
   slug: 'navigation',
+  hooks: {
+    afterChange: [
+      ({ doc }) => {
+        revalidate(['global:navigation'])
+        return doc
+      },
+    ],
+  },
   label: 'Navigation',
   access: {
     read: () => true,

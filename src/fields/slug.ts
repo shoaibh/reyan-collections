@@ -8,6 +8,7 @@ const randomSuffix = (length: number): string =>
 export function slugify(input: string): string {
   const slug = input
     .toLowerCase()
+    .replace(/['\u2019]/g, '')
     .replace(/&/g, ' and ')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
