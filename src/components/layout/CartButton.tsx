@@ -9,6 +9,7 @@ export function CartButton() {
   return (
     <button
       type="button"
+      data-cart-button
       onClick={() => setOpen(true)}
       aria-label={`Cart, ${count} ${count === 1 ? 'item' : 'items'}`}
       className="relative flex size-[38px] items-center justify-center rounded-full border-[2.5px] border-ink bg-tomato text-ink shadow-[2px_2px_0_var(--color-ink)] md:size-auto md:gap-2 md:px-[18px] md:py-[9px] md:font-bold md:shadow-pop-sm"

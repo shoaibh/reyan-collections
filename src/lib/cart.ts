@@ -53,3 +53,11 @@ export function parseCart(raw: string | null): CartLine[] {
     return []
   }
 }
+
+/** Re-clamps every line to the current maxPerOrder, dropping lines that end up empty. */
+export function clampLines(lines: CartLine[], maxPerOrder: number): CartLine[] {
+  return lines.flatMap((l) => {
+    const qty = clamp(l.qty, maxPerOrder)
+    return qty > 0 ? [{ ...l, qty }] : []
+  })
+}

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-import { setVariantStock } from './helpers/productRest'
+import { setPublished, setVariantStock } from './helpers/productRest'
 
 test('Instagram visitor browses and fills a cart', async ({ page }) => {
   // An Instagram visitor lands on the links page first
@@ -111,9 +111,67 @@ test('Instagram visitor browses and fills a cart', async ({ page }) => {
 
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
 
+  // Cart: add two Sand containers, then raise to the stock limit of 3
+  await page.getByRole('group', { name: 'Quantity' }).getByRole('button', { name: 'Increase quantity' }).click()
+  await expect(page.getByRole('group', { name: 'Quantity' }).locator('output')).toHaveText('2')
   const addToCart = page.getByRole('button', { name: 'Add to cart' })
-  await expect(addToCart).toBeVisible()
   await expect(addToCart).toBeEnabled()
+  // A click before hydration is lost, so retry until the drawer opens
+  const drawer = page.getByRole('dialog', { name: 'Cart' })
+  await expect(async () => {
+    await addToCart.click()
+    await expect(drawer).toBeVisible({ timeout: 1000 })
+  }).toPass()
+  await expect(drawer.getByText('Mexico premium container, set of 2 — Sand')).toBeVisible()
+  await expect(drawer.locator('output')).toHaveText('2')
+  await drawer.getByRole('button', { name: 'Increase quantity' }).click()
+  await expect(drawer.locator('output')).toHaveText('3')
+  await expect(drawer.getByRole('button', { name: 'Increase quantity' })).toBeDisabled()
+
+  // Esc closes the drawer and returns focus to the cart button
+  await page.keyboard.press('Escape')
+  await expect(drawer).toBeHidden()
+  const cartButton = page.getByRole('banner').getByRole('button', { name: /^Cart/ })
+  await expect(cartButton).toBeFocused()
+  await expect(cartButton).toContainText('3')
+
+  // The cart persists across a reload
+  await page.reload()
+  await expect(cartButton).toContainText('3')
+
+  // Final: the subtotal reflects 3 x ₹449
+  await expect(async () => {
+    await cartButton.click()
+    await expect(drawer).toBeVisible({ timeout: 1000 })
+  }).toPass()
+  await expect(drawer.getByTestId('cart-subtotal')).toHaveText('₹1,347')
+})
+
+test('cart shows a product that went unavailable', async ({ page, request }) => {
+  await page.goto('/p/duck-climbing-track-toy-with-music')
+  const addToCart = page.getByRole('button', { name: 'Add to cart' })
+  const drawer = page.getByRole('dialog', { name: 'Cart' })
+  await expect(async () => {
+    await addToCart.click()
+    await expect(drawer).toBeVisible({ timeout: 1000 })
+  }).toPass()
+  await expect(drawer.getByText('Duck climbing track toy with music')).toBeVisible()
+
+  await setPublished(request, 'duck-climbing-track-toy-with-music', false)
+  try {
+    await page.goto('/')
+    const cartButton = page.getByRole('banner').getByRole('button', { name: /^Cart/ })
+    await expect(async () => {
+      await cartButton.click()
+      await expect(drawer).toBeVisible({ timeout: 1000 })
+    }).toPass()
+    await expect(drawer.getByText('No longer available')).toBeVisible()
+    await expect(drawer.getByRole('button', { name: /Remove/ })).toBeVisible()
+    await expect(drawer.getByText('Subtotal')).toBeVisible()
+    await expect(drawer.getByTestId('cart-subtotal')).toHaveText('₹0')
+  } finally {
+    await setPublished(request, 'duck-climbing-track-toy-with-music', true)
+  }
 })
 
 test('fully out-of-stock product cannot be added', async ({ page, request }) => {

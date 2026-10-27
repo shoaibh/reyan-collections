@@ -2,7 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
-import { addLine, count as countLines, parseCart, removeLine, setQty as setLineQty, type CartLine } from '@/lib/cart'
+import { addLine, clampLines, count as countLines, parseCart, removeLine, setQty as setLineQty, type CartLine } from '@/lib/cart'
 
 const STORAGE_KEY = 'rc-cart-v1'
 
@@ -12,6 +12,7 @@ type CartContextValue = {
   setQty: (productId: number, variantId: string, qty: number) => void
   remove: (productId: number, variantId: string) => void
   count: number
+  maxPerOrder: number
   open: boolean
   setOpen: (open: boolean) => void
 }
@@ -33,12 +34,12 @@ export function CartProvider({
   useEffect(() => {
     try {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLines(parseCart(window.localStorage.getItem(STORAGE_KEY)))
+      setLines(clampLines(parseCart(window.localStorage.getItem(STORAGE_KEY)), maxPerOrder))
     } catch {
       // storage unavailable: start empty
     }
     setLoaded(true)
-  }, [])
+  }, [maxPerOrder])
 
   useEffect(() => {
     if (!loaded) return
@@ -64,8 +65,8 @@ export function CartProvider({
   )
 
   const value = useMemo<CartContextValue>(
-    () => ({ lines, add, setQty, remove, count: countLines(lines), open, setOpen }),
-    [lines, add, setQty, remove, open],
+    () => ({ lines, add, setQty, remove, count: countLines(lines), maxPerOrder, open, setOpen }),
+    [lines, add, setQty, remove, maxPerOrder, open],
   )
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>

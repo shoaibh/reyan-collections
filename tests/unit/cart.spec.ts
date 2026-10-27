@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { addLine, count, removeLine, setQty, type CartLine } from '@/lib/cart'
+import { addLine, clampLines, count, removeLine, setQty, type CartLine } from '@/lib/cart'
 
 const line: CartLine = { productId: 1, variantId: 'mint', qty: 1 }
 
@@ -35,5 +35,14 @@ describe('cart', () => {
   it('count sums quantities', () => {
     expect(count([{ ...line, qty: 2 }, { ...line, variantId: 'pink', qty: 3 }])).toBe(5)
     expect(count([])).toBe(0)
+  })
+
+  it('re-clamps persisted lines to the current maxPerOrder', () => {
+    const lines = [
+      { ...line, qty: 9 },
+      { ...line, variantId: 'pink', qty: 2 },
+    ]
+    expect(clampLines(lines, 5).map((l) => l.qty)).toEqual([5, 2])
+    expect(clampLines(lines, 0)).toEqual([])
   })
 })

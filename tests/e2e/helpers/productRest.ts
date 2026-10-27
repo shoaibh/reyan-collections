@@ -46,3 +46,36 @@ export async function setVariantStock(
   await write(original.map((r) => (r.name === variantName ? { ...r, stock } : r)))
   return () => write(original)
 }
+
+/**
+ * Publishes or unpublishes a product through the REST API (as the seed admin). The PATCH carries
+ * only `_status` and no `?draft=true`, so the published main document is what changes and every
+ * other field is left untouched.
+ */
+export async function setPublished(
+  request: APIRequestContext,
+  slug: string,
+  published: boolean,
+): Promise<void> {
+  const login = await request.post('/api/users/login', {
+    data: { email: process.env.SEED_ADMIN_EMAIL, password: process.env.SEED_ADMIN_PASSWORD },
+  })
+  expect(login.ok()).toBeTruthy()
+  const { token } = (await login.json()) as { token: string }
+  const headers = { Authorization: `JWT ${token}` }
+
+  // draft=true finds the product even while it is unpublished
+  const found = await request.get(
+    `/api/products?where[slug][equals]=${encodeURIComponent(slug)}&depth=0&draft=true`,
+    { headers },
+  )
+  expect(found.ok()).toBeTruthy()
+  const product = ((await found.json()) as { docs: { id: number }[] }).docs[0]
+  expect(product).toBeTruthy()
+
+  const res = await request.patch(`/api/products/${product.id}`, {
+    headers,
+    data: { _status: published ? 'published' : 'draft' },
+  })
+  expect(res.ok()).toBeTruthy()
+}
