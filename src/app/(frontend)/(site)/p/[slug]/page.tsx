@@ -11,7 +11,7 @@ import { showComparison } from '@/lib/commerce/product'
 import { getProduct, listRelated } from '@/lib/data/catalog'
 import { getStoreSettings } from '@/lib/data/globals'
 import { formatINR } from '@/lib/format'
-import { absoluteUrl, productJsonLd, serializeJsonLd } from '@/lib/seo'
+import { absoluteUrl, BRAND, DEFAULT_OG_IMAGE, productJsonLd, serializeJsonLd } from '@/lib/seo'
 import { resolveImage } from '@/lib/media'
 
 type Params = Promise<{ slug: string }>
@@ -28,7 +28,13 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return {
     title,
     description,
-    openGraph: { title, description, images: image ? [{ url: image.src, alt: image.alt }] : undefined },
+    openGraph: {
+      siteName: BRAND,
+      title,
+      description,
+      // A page-level openGraph replaces the layout's, so the default image is restated here
+      images: image ? [{ url: image.src, alt: image.alt }] : [DEFAULT_OG_IMAGE],
+    },
   }
 }
 

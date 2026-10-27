@@ -40,12 +40,12 @@ export default defineConfig({
     {
       name: 'chromium',
       // The storefront journey is mobile-only (later tasks assert 390px layout)
-      testIgnore: /storefront\.e2e\.spec\.ts/,
+      testIgnore: /(^|[\\/])storefront\.e2e\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'], channel: 'chromium' },
     },
     {
       name: 'mobile',
-      testMatch: 'storefront.e2e.spec.ts',
+      testMatch: /(^|[\\/])storefront\.e2e\.spec\.ts$/,
       use: {
         ...devices['Desktop Chrome'],
         channel: 'chromium',

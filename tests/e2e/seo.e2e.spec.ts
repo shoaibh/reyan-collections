@@ -17,8 +17,14 @@ test('search engines can crawl the shop', async ({ page, request }) => {
   const html = await product.text()
   expect(html).toContain('"priceCurrency":"INR"')
   expect(html).toContain('"price":449')
+  // The page-level openGraph keeps the site name and falls back to the default image
+  expect(html).toContain('og:site_name')
 
   // An unknown URL renders the branded not-found page
   await page.goto('/does-not-exist')
+  await expect(page.getByRole('heading', { name: 'This page went out of stock' })).toBeVisible()
+
+  // A multi-segment unknown URL (no route matches at all) is branded too
+  await page.goto('/a/b')
   await expect(page.getByRole('heading', { name: 'This page went out of stock' })).toBeVisible()
 })

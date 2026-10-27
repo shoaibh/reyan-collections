@@ -1,6 +1,16 @@
-import { test, expect } from '@playwright/test'
+import AxeBuilder from '@axe-core/playwright'
+import { test, expect, type Page } from '@playwright/test'
 
 import { setPublished, setVariantStock } from './helpers/productRest'
+
+/** WCAG 2 A/AA scan; serious and critical findings fail the test, and are listed in the message. */
+async function expectNoSeriousViolations(page: Page) {
+  const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
+  const serious = violations
+    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    .map((v) => `${v.id} (${v.impact}): ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)
+  expect(serious).toEqual([])
+}
 
 test('Instagram visitor browses and fills a cart', async ({ page }) => {
   // An Instagram visitor lands on the links page first
@@ -10,6 +20,7 @@ test('Instagram visitor browses and fills a cart', async ({ page }) => {
   await expect(buttons).toHaveCount(5)
   await expect(buttons.first()).toContainText('Shop on our website')
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  await expectNoSeriousViolations(page)
   await page.getByRole('link', { name: 'Shop on our website' }).click()
   await expect(page).toHaveURL(/\/$/)
 
@@ -68,6 +79,8 @@ test('Instagram visitor browses and fills a cart', async ({ page }) => {
   // The page ends on the "why buy directly" band
   await expect(page.getByRole('heading', { name: 'Why buy directly from us?' })).toBeVisible()
 
+  await expectNoSeriousViolations(page)
+
   // Category listing
   await tiles.getByRole('link', { name: /Kitchen & Home/ }).click()
   await expect(page).toHaveURL(/\/c\/kitchen-and-home$/)
@@ -76,6 +89,8 @@ test('Instagram visitor browses and fills a cart', async ({ page }) => {
   await expect(cards).toHaveCount(2)
   await expect(cards.filter({ hasText: 'Mexico premium container, set of 2' })).toHaveCount(1)
   await expect(cards.filter({ hasText: 'Portable juicer, 400 ml, USB charging' })).toHaveCount(1)
+
+  await expectNoSeriousViolations(page)
 
   // Search from the header (a phone shows a search icon that opens /shop)
   await page.getByRole('banner').getByRole('link', { name: 'Search products' }).click()
@@ -111,6 +126,8 @@ test('Instagram visitor browses and fills a cart', async ({ page }) => {
 
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
 
+  await expectNoSeriousViolations(page)
+
   // Cart: add two Sand containers, then raise to the stock limit of 3
   await page.getByRole('group', { name: 'Quantity' }).getByRole('button', { name: 'Increase quantity' }).click()
   await expect(page.getByRole('group', { name: 'Quantity' }).locator('output')).toHaveText('2')
@@ -145,6 +162,7 @@ test('Instagram visitor browses and fills a cart', async ({ page }) => {
     await expect(drawer).toBeVisible({ timeout: 1000 })
   }).toPass()
   await expect(drawer.getByTestId('cart-subtotal')).toHaveText('₹1,347')
+  await expectNoSeriousViolations(page)
 })
 
 test('cart shows a product that went unavailable', async ({ page, request }) => {

@@ -7,6 +7,9 @@ const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
 
 const nextConfig: NextConfig = {
+  // The Payload admin and the storefront are separate root layouts, so a URL that matches no route at
+  // all needs a global 404 (a root app/not-found.tsx has no single layout to render inside)
+  experimental: { globalNotFound: true },
   images: {
     localPatterns: [
       {

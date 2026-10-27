@@ -3,6 +3,7 @@ import type { Media, Product, StoreSetting } from '@/payload-types'
 import { resolveImage } from './media'
 
 export const BRAND = 'Reyan Collections'
+export const DEFAULT_OG_IMAGE = '/brand/logo-circle.jpg'
 export const DEFAULT_SITE_URL = 'http://localhost:3000'
 
 /** Public origin of the site, without a trailing slash. */

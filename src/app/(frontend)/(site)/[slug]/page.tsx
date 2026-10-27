@@ -5,6 +5,7 @@ import React from 'react'
 import { RichText } from '@/components/product/RichText'
 import { getPage, RESERVED_SLUGS } from '@/lib/data/pages'
 import { resolveImage } from '@/lib/media'
+import { BRAND, DEFAULT_OG_IMAGE } from '@/lib/seo'
 
 type Params = Promise<{ slug: string }>
 
@@ -17,7 +18,13 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return {
     title,
     description,
-    openGraph: { title, description, images: image ? [{ url: image.src, alt: image.alt }] : undefined },
+    openGraph: {
+      siteName: BRAND,
+      title,
+      description,
+      // A page-level openGraph replaces the layout's, so the default image is restated here
+      images: image ? [{ url: image.src, alt: image.alt }] : [DEFAULT_OG_IMAGE],
+    },
   }
 }
 
