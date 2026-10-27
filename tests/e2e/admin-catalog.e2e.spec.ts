@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
 
+import { setVariantStock } from './helpers/productRest'
+
 test('owner manages stock of a colour variant', async ({ page, request }) => {
   const email = process.env.SEED_ADMIN_EMAIL as string
   const password = process.env.SEED_ADMIN_PASSWORD as string
@@ -30,25 +32,8 @@ test('owner manages stock of a colour variant', async ({ page, request }) => {
   await expect(page.locator('input[name="variants.0.name"]')).toHaveValue('Mint')
   await expect(page.locator('input[name="variants.1.name"]')).toHaveValue('Sand')
 
-  // Later specs read the seeded stock (Sand 3), so put it back whatever happens below
-  const restoreSand = async () => {
-    const login = await request.post('/api/users/login', { data: { email, password } })
-    const { token } = (await login.json()) as { token: string }
-    const headers = { Authorization: `JWT ${token}` }
-    const found = await request.get(
-      '/api/products?where[slug][equals]=mexico-premium-container-set-of-2&depth=0&draft=false',
-      { headers },
-    )
-    type Variant = { id: string; name: string; stock: number }
-    const doc = ((await found.json()) as { docs: { id: number; variants: Variant[] }[] }).docs[0]
-    // The variants array is replaced as a whole, so send every row
-    const variants = doc.variants.map((v) => (v.name === 'Sand' ? { ...v, stock: 3 } : v))
-    const res = await request.patch(`/api/products/${doc.id}`, {
-      headers,
-      data: { variants, _status: 'published' },
-    })
-    expect(res.ok()).toBeTruthy()
-  }
+  // Later specs read the seeded stock, so restore the exact original variant rows whatever happens
+  const restoreSand = await setVariantStock(request, 'mexico-premium-container-set-of-2', 'Sand', 3)
 
   try {
     // Set Sand's stock and publish

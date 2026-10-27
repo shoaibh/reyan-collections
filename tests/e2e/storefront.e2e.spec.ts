@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
 
+import { setVariantStock } from './helpers/productRest'
+
 test('Instagram visitor browses and fills a cart', async ({ page }) => {
   // An Instagram visitor lands on the links page first
   await page.goto('/links')
@@ -115,33 +117,8 @@ test('Instagram visitor browses and fills a cart', async ({ page }) => {
 })
 
 test('fully out-of-stock product cannot be added', async ({ page, request }) => {
-  const login = await request.post('/api/users/login', {
-    data: { email: process.env.SEED_ADMIN_EMAIL, password: process.env.SEED_ADMIN_PASSWORD },
-  })
-  expect(login.ok()).toBeTruthy()
-  const { token } = (await login.json()) as { token: string }
-  const headers = { Authorization: `JWT ${token}` }
-
-  type Variant = { id: string; name: string; stock: number }
-  const found = await request.get(
-    '/api/products?where[slug][equals]=induction-flight-rc-helicopter&depth=0&draft=false',
-    { headers },
-  )
-  expect(found.ok()).toBeTruthy()
-  const product = ((await found.json()) as { docs: { id: number; variants: Variant[] }[] }).docs[0]
-  expect(product).toBeTruthy()
-  const original = product.variants[0]
-
-  const setStock = async (stock: number) => {
-    const res = await request.patch(`/api/products/${product.id}`, {
-      headers,
-      data: { variants: [{ id: original.id, name: original.name, stock }], _status: 'published' },
-    })
-    expect(res.ok()).toBeTruthy()
-  }
-
+  const restore = await setVariantStock(request, 'induction-flight-rc-helicopter', 'Default', 0)
   try {
-    await setStock(0)
     // Cache revalidation runs in an afterChange hook; retry until the listing reflects the change
     const card = page.getByTestId('product-card').filter({ hasText: 'Induction flight RC helicopter' })
     await expect(async () => {
@@ -154,7 +131,7 @@ test('fully out-of-stock product cannot be added', async ({ page, request }) => 
     await expect(page.getByRole('link', { name: 'Ask on WhatsApp' })).toBeVisible()
     await expect(page.getByText('Out of stock').first()).toBeVisible()
   } finally {
-    await setStock(original.stock)
+    await restore()
   }
 })
 
