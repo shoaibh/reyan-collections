@@ -1,5 +1,7 @@
 import { Bricolage_Grotesque } from 'next/font/google'
 import React from 'react'
+import { CartProvider } from '@/components/cart/CartProvider'
+import { getStoreSettings } from '@/lib/data/globals'
 import './globals.css'
 
 const bricolage = Bricolage_Grotesque({
@@ -16,11 +18,12 @@ export const metadata = {
 
 export default async function RootLayout(props: { children: React.ReactNode }) {
   const { children } = props
+  const settings = await getStoreSettings()
 
   return (
     <html lang="en" className={bricolage.variable}>
       <body>
-        <main>{children}</main>
+        <CartProvider maxPerOrder={settings.commerce?.maxPerOrder ?? 5}>{children}</CartProvider>
       </body>
     </html>
   )

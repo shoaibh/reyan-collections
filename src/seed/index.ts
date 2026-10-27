@@ -136,6 +136,12 @@ export async function seed(payload: Payload): Promise<{ products: number; catego
     },
   })
 
+  // Placeholder contact number (same as the links page button) so the WhatsApp button shows in dev and e2e
+  await payload.updateGlobal({
+    slug: 'store-settings',
+    data: { business: { name: 'Reyan Collections', whatsappNumber: '910000000000' } },
+  })
+
   await payload.updateGlobal({ slug: 'links-page', data: { ...linksData, buttons: [...linksData.buttons] } })
 
   const [productA, productB] = [products[0], products[2]]
