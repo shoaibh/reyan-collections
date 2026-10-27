@@ -84,6 +84,78 @@ test('Instagram visitor browses and fills a cart', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: 'Results for "duck"' })).toBeVisible()
   await expect(cards).toHaveCount(1)
   await expect(cards.filter({ hasText: 'Duck climbing track toy with music' })).toBeVisible()
+
+  // Product page: pick a variant, see live stock, check delivery
+  await page.goto('/p/mexico-premium-container-set-of-2')
+  await expect(page.getByRole('heading', { level: 1, name: 'Mexico premium container, set of 2' })).toBeVisible()
+  await expect(page.getByText('Prices include GST')).toBeVisible()
+  await expect(page.getByText('Colour: Mint')).toBeVisible()
+  const sand = page.getByRole('button', { name: 'Sand', exact: true })
+  // A click before hydration is lost, so retry until the swatch is selected
+  await expect(async () => {
+    await sand.click()
+    await expect(sand).toHaveAttribute('aria-pressed', 'true', { timeout: 1000 })
+  }).toPass()
+  await expect(page.getByText('Colour: Sand')).toBeVisible()
+  await expect(page.getByText('Only 3 left')).toBeVisible()
+
+  const pincode = page.getByLabel('Pincode')
+  await pincode.fill('226010')
+  await page.getByRole('button', { name: 'Check', exact: true }).click()
+  await expect(page.getByText(/COD available/)).toBeVisible()
+  await pincode.fill('000000')
+  await page.getByRole('button', { name: 'Check', exact: true }).click()
+  await expect(page.getByText("Sorry, we can't deliver to 000000 yet")).toBeVisible()
+
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+
+  const addToCart = page.getByRole('button', { name: 'Add to cart' })
+  await expect(addToCart).toBeVisible()
+  await expect(addToCart).toBeEnabled()
+})
+
+test('fully out-of-stock product cannot be added', async ({ page, request }) => {
+  const login = await request.post('/api/users/login', {
+    data: { email: process.env.SEED_ADMIN_EMAIL, password: process.env.SEED_ADMIN_PASSWORD },
+  })
+  expect(login.ok()).toBeTruthy()
+  const { token } = (await login.json()) as { token: string }
+  const headers = { Authorization: `JWT ${token}` }
+
+  type Variant = { id: string; name: string; stock: number }
+  const found = await request.get(
+    '/api/products?where[slug][equals]=induction-flight-rc-helicopter&depth=0&draft=false',
+    { headers },
+  )
+  expect(found.ok()).toBeTruthy()
+  const product = ((await found.json()) as { docs: { id: number; variants: Variant[] }[] }).docs[0]
+  expect(product).toBeTruthy()
+  const original = product.variants[0]
+
+  const setStock = async (stock: number) => {
+    const res = await request.patch(`/api/products/${product.id}`, {
+      headers,
+      data: { variants: [{ id: original.id, name: original.name, stock }], _status: 'published' },
+    })
+    expect(res.ok()).toBeTruthy()
+  }
+
+  try {
+    await setStock(0)
+    // Cache revalidation runs in an afterChange hook; retry until the listing reflects the change
+    const card = page.getByTestId('product-card').filter({ hasText: 'Induction flight RC helicopter' })
+    await expect(async () => {
+      await page.goto('/shop')
+      await expect(card).toContainText('Out of stock', { timeout: 1000 })
+    }).toPass()
+
+    await page.goto('/p/induction-flight-rc-helicopter')
+    await expect(page.getByRole('button', { name: 'Add to cart' })).toBeDisabled()
+    await expect(page.getByRole('link', { name: 'Ask on WhatsApp' })).toBeVisible()
+    await expect(page.getByText('Out of stock').first()).toBeVisible()
+  } finally {
+    await setStock(original.stock)
+  }
 })
 
 test('hero without a featured product still renders', async ({ page, request }) => {
