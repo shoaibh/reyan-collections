@@ -72,24 +72,31 @@ test('hero without a featured product still renders', async ({ page, request }) 
   const originalProductA = ((await current.json()) as { hero: { productA: number | null } }).hero.productA
   expect(originalProductA).not.toBeNull()
 
-  const setProductA = async (productA: number | null) => {
+  const originalOverride = ((await current.json()) as { hero: { imageOverrideA: number | null } }).hero
+    .imageOverrideA
+  const media = await request.get('/api/media?limit=1&depth=0', { headers })
+  const mediaId = ((await media.json()) as { docs: { id: number }[] }).docs[0].id
+
+  const setHero = async (productA: number | null, imageOverrideA: number | null) => {
     const res = await request.post('/api/globals/homepage', {
       headers,
-      data: { hero: { productA }, _status: 'published' },
+      data: { hero: { productA, imageOverrideA }, _status: 'published' },
     })
     expect(res.ok()).toBeTruthy()
   }
 
   try {
-    await setProductA(null)
+    await setHero(null, mediaId)
     // Cache revalidation runs in an afterChange hook; retry until the page reflects the change
     await expect(async () => {
       await page.goto('/')
       await expect(page.getByTestId('price-tag')).toHaveCount(0, { timeout: 1000 })
     }).toPass()
+    // An image override alone must not bring the visual column back
+    await expect(page.getByTestId('hero-visual')).toHaveCount(0)
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Fun for little hands.')
   } finally {
-    await setProductA(originalProductA)
+    await setHero(originalProductA, originalOverride)
   }
 
   // The restore reaches the storefront too: the price tag is back

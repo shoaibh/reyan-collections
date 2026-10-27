@@ -51,7 +51,7 @@ export function Hero({
     return typeof value === 'number' && value > 0 ? [{ label: marketplaceLabel[m], value }] : []
   })
 
-  const showVisual = Boolean(productA || imageA)
+  const showVisual = Boolean(productA)
 
   return (
     <section
@@ -101,7 +101,7 @@ export function Hero({
       </div>
 
       {showVisual && (
-        <div className="relative mt-2 h-[330px] md:mt-0 md:h-[520px]">
+        <div data-testid="hero-visual" className="relative mt-2 h-[330px] md:mt-0 md:h-[520px]">
           <div
             aria-hidden="true"
             className="absolute top-5 right-0 size-[270px] rounded-[42%_58%_63%_37%/41%_44%_56%_59%] bg-tomato md:top-[30px] md:right-[30px] md:size-[430px]"
