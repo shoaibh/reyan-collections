@@ -3,7 +3,7 @@ import React from 'react'
 
 import { CartContents } from '@/components/cart/CartContents'
 
-export const metadata: Metadata = { title: 'Your cart | Reyan Collections' }
+export const metadata: Metadata = { title: 'Your cart' }
 
 export default function CartPage() {
   return (

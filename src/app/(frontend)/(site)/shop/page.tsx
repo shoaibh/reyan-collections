@@ -14,7 +14,7 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
 
 export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
   const q = normaliseQuery(one((await searchParams).q))
-  return { title: q ? `Results for "${q}" | Reyan Collections` : 'Shop all | Reyan Collections' }
+  return { title: q ? `Results for "${q}"` : 'Shop all' }
 }
 
 const chip =

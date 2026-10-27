@@ -3,6 +3,21 @@ import type { Page } from '@/payload-types'
 import { cached } from './cache'
 import { getClient } from './getPayloadClient'
 
+/** Top-level paths owned by the app. A CMS page must never shadow them, so they are never listed. */
+export const RESERVED_SLUGS = new Set([
+  'shop',
+  'links',
+  'cart',
+  'checkout',
+  'track',
+  'order',
+  'admin',
+  'api',
+  'p',
+  'c',
+  'collections',
+])
+
 export const getPage = (slug: string): Promise<Page | null> =>
   cached(
     async () => {
@@ -32,7 +47,9 @@ export const listPageSlugs = cached<string[]>(
       draft: false,
       overrideAccess: false,
     })
-    return docs.map((d) => d.slug).filter((s): s is string => typeof s === 'string')
+    return docs
+      .map((d) => d.slug)
+      .filter((s): s is string => typeof s === 'string' && !RESERVED_SLUGS.has(s))
   },
   ['pages', 'slugs'],
   ['pages'],

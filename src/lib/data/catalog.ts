@@ -116,6 +116,22 @@ export const getCurated = (slug: string): Promise<Curated | null> =>
     ['curated', 'products'],
   )()
 
+export const listCuratedSlugs = cached<string[]>(
+  async () => {
+    const payload = await getClient()
+    const { docs } = await payload.find({
+      collection: 'curated',
+      limit: 1000,
+      pagination: false,
+      depth: 0,
+      overrideAccess: false,
+    })
+    return docs.map((d) => d.slug).filter((s): s is string => typeof s === 'string')
+  },
+  ['curated', 'slugs'],
+  ['curated'],
+)
+
 export async function listRelated(product: Product, limit = 4): Promise<Product[]> {
   const all = await listProducts()
   const categoryId = typeof product.category === 'object' ? product.category.id : product.category

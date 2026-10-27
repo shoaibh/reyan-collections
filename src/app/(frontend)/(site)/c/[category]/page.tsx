@@ -10,7 +10,7 @@ type Params = Promise<{ category: string }>
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const category = await getCategory((await params).category)
-  return { title: category ? `${category.title} | Reyan Collections` : 'Not found' }
+  return { title: category ? category.title : 'Not found' }
 }
 
 export default async function CategoryPage({ params }: { params: Params }) {

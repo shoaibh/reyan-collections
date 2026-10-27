@@ -11,7 +11,7 @@ type Params = Promise<{ slug: string }>
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const curated = await getCurated((await params).slug)
-  return { title: curated ? `${curated.title} | Reyan Collections` : 'Not found' }
+  return { title: curated ? curated.title : 'Not found' }
 }
 
 export default async function CollectionPage({ params }: { params: Params }) {

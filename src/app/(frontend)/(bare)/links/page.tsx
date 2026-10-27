@@ -4,7 +4,7 @@ import React from 'react'
 import { LinkButton } from '@/components/links/LinkButton'
 import { getLinksPage } from '@/lib/data/globals'
 
-export const metadata: Metadata = { title: 'Links | Reyan Collections' }
+export const metadata: Metadata = { title: 'Links' }
 
 export default async function LinksPage() {
   const links = await getLinksPage()

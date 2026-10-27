@@ -11,6 +11,7 @@ import { showComparison } from '@/lib/commerce/product'
 import { getProduct, listRelated } from '@/lib/data/catalog'
 import { getStoreSettings } from '@/lib/data/globals'
 import { formatINR } from '@/lib/format'
+import { absoluteUrl, productJsonLd, serializeJsonLd } from '@/lib/seo'
 import { resolveImage } from '@/lib/media'
 
 type Params = Promise<{ slug: string }>
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const description = product.seo?.description?.trim() || product.shortDescription || undefined
   const image = resolveImage(product.seo?.image ?? product.images?.[0], 'hero', product.title)
   return {
-    title: `${title} | Reyan Collections`,
+    title,
     description,
     openGraph: { title, description, images: image ? [{ url: image.src, alt: image.alt }] : undefined },
   }
@@ -61,6 +62,7 @@ export default async function ProductPage({ params }: { params: Params }) {
   const box = resolveImage(product.boxImage, 'card', `What's in the box for ${product.title}`)
   const highlights = (product.highlights ?? []).filter((h) => h.text)
   const links = product.marketplaceLinks ?? []
+  const jsonLd = serializeJsonLd(productJsonLd(product, absoluteUrl(`/p/${(await params).slug}`)))
   const hasDescription = (product.description?.root?.children?.length ?? 0) > 0
 
   const header = (
@@ -89,6 +91,7 @@ export default async function ProductPage({ params }: { params: Params }) {
 
   return (
     <article className="px-[18px] pt-6 pb-4 md:px-12 md:pt-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
       <ProductBuyBox
         productId={product.id}
         title={product.title}

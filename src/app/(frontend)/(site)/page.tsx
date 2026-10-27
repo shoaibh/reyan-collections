@@ -7,6 +7,7 @@ import { TrustRow } from '@/components/home/TrustRow'
 import { WhyDirect, type Marketplace } from '@/components/home/WhyDirect'
 import { getCurated, listCategories, listProducts } from '@/lib/data/catalog'
 import { getHomepage, getStoreSettings } from '@/lib/data/globals'
+import { absoluteUrl, organizationJsonLd, serializeJsonLd } from '@/lib/seo'
 import type { Product } from '@/payload-types'
 
 export default async function HomePage() {
@@ -30,8 +31,11 @@ export default async function HomePage() {
     { label: 'Meesho', href: social?.meeshoStoreUrl?.trim() },
   ].filter((m): m is Marketplace => Boolean(m.href))
 
+  const jsonLd = serializeJsonLd(organizationJsonLd(settings, absoluteUrl('/')))
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
       <Hero hero={homepage.hero} ratings={social?.ratings} />
       <TrustRow returnWindowDays={settings.commerce?.returnWindowDays ?? 7} />
       <CategoryTiles categories={categories} />
