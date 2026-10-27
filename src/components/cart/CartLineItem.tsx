@@ -1,9 +1,11 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import React from 'react'
 
 import type { CartLineInfo } from '@/app/(frontend)/api/cart-lines/route'
+import { clampNotice } from '@/components/cart/CartProvider'
 import { QtyStepper } from '@/components/product/QtyStepper'
 import { formatINR } from '@/lib/format'
 
@@ -15,6 +17,7 @@ export function CartLineItem({
   info,
   qty,
   maxPerOrder,
+  notice,
   onQty,
   onRemove,
   onNavigate,
@@ -22,6 +25,7 @@ export function CartLineItem({
   info: CartLineInfo
   qty: number
   maxPerOrder: number
+  notice?: string
   onQty: (qty: number) => void
   onRemove: () => void
   onNavigate?: () => void
@@ -49,7 +53,7 @@ export function CartLineItem({
   const name = info.variantName && info.variantName !== 'Default' ? `${info.title} — ${info.variantName}` : info.title
   const shown = effectiveQty(qty, info.stock, maxPerOrder)
   const max = Math.min(info.stock, maxPerOrder)
-  const clamped = qty > shown
+  const message = notice ?? (qty > shown ? clampNotice(qty, info.stock, maxPerOrder) : null)
 
   return (
     <li className="flex flex-col gap-2 rounded-2xl border-[3px] border-ink bg-white p-3">
@@ -67,18 +71,18 @@ export function CartLineItem({
         )}
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           {info.slug ? (
-            <a href={`/p/${info.slug}`} onClick={onNavigate} className="font-bold leading-snug underline-offset-2 hover:underline">
+            <Link href={`/p/${info.slug}`} onClick={onNavigate} className="font-bold leading-snug underline-offset-2 hover:underline">
               {name}
-            </a>
+            </Link>
           ) : (
             <p className="font-bold leading-snug">{name}</p>
           )}
           <p className="text-sm text-softer">{formatINR(info.price)} each</p>
         </div>
       </div>
-      {clamped && (
+      {message && (
         <p role="status" className="rounded-lg border-2 border-ink bg-sun px-2.5 py-1 text-sm font-bold text-ink">
-          Only {info.stock} left; we updated your quantity
+          {message}
         </p>
       )}
       <div className="flex items-center justify-between gap-3">

@@ -8,8 +8,8 @@ import { CartLineItem, effectiveQty } from '@/components/cart/CartLineItem'
 import { lineKey, useCartLines } from '@/components/cart/useCartLines'
 import { formatINR } from '@/lib/format'
 
-const primary =
-  'rounded-2xl border-[3px] border-ink bg-cobalt px-6 py-3.5 text-center text-[19px] font-extrabold text-white shadow-[4px_4px_0_var(--color-ink)]'
+const base = 'rounded-2xl border-[3px] border-ink px-6 py-3.5 text-center text-[19px] font-extrabold'
+const primary = `${base} bg-cobalt text-white shadow-[4px_4px_0_var(--color-ink)]`
 
 /** The cart body shared by the drawer and the /cart page. */
 export function CartContents({ active, onNavigate }: { active: boolean; onNavigate?: () => void }) {
@@ -61,6 +61,7 @@ export function CartContents({ active, onNavigate }: { active: boolean; onNaviga
               info={data}
               qty={line.qty}
               maxPerOrder={cart.maxPerOrder}
+              notice={cart.notices[lineKey(line.productId, line.variantId)]}
               onQty={(qty) => cart.setQty(line.productId, line.variantId, qty)}
               onRemove={() => cart.remove(line.productId, line.variantId)}
               onNavigate={onNavigate}
@@ -80,7 +81,7 @@ export function CartContents({ active, onNavigate }: { active: boolean; onNaviga
           Checkout
         </Link>
       ) : (
-        <span aria-disabled="true" className={`${primary} bg-white text-softer shadow-none`}>
+        <span aria-disabled="true" className={`${base} bg-white text-soft`}>
           Checkout
         </span>
       )}

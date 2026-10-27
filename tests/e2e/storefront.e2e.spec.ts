@@ -169,6 +169,9 @@ test('cart shows a product that went unavailable', async ({ page, request }) => 
     await expect(drawer.getByRole('button', { name: /Remove/ })).toBeVisible()
     await expect(drawer.getByText('Subtotal')).toBeVisible()
     await expect(drawer.getByTestId('cart-subtotal')).toHaveText('₹0')
+    // The unavailable line does not count toward the badge
+    await expect(cartButton).toContainText('0')
+    await expect(cartButton).toHaveAccessibleName('Cart, 0 items')
   } finally {
     await setPublished(request, 'duck-climbing-track-toy-with-music', true)
   }
@@ -238,4 +241,41 @@ test('hero without a featured product still renders', async ({ page, request }) 
     await page.goto('/')
     await expect(page.getByTestId('price-tag')).toBeVisible({ timeout: 1000 })
   }).toPass()
+})
+
+test('cart clamps a quantity above live stock', async ({ page, request }) => {
+  await page.goto('/p/mexico-premium-container-set-of-2')
+  const sand = page.getByRole('button', { name: 'Sand', exact: true })
+  await expect(async () => {
+    await sand.click()
+    await expect(sand).toHaveAttribute('aria-pressed', 'true', { timeout: 1000 })
+  }).toPass()
+  const stepper = page.getByRole('group', { name: 'Quantity' })
+  await stepper.getByRole('button', { name: 'Increase quantity' }).click()
+  await stepper.getByRole('button', { name: 'Increase quantity' }).click()
+  await expect(stepper.locator('output')).toHaveText('3')
+  const drawer = page.getByRole('dialog', { name: 'Cart' })
+  await expect(async () => {
+    await page.getByRole('button', { name: 'Add to cart' }).click()
+    await expect(drawer).toBeVisible({ timeout: 1000 })
+  }).toPass()
+  await expect(drawer.locator('output')).toHaveText('3')
+  await page.keyboard.press('Escape')
+
+  const restore = await setVariantStock(request, 'mexico-premium-container-set-of-2', 'Sand', 1)
+  try {
+    await page.reload()
+    const cartButton = page.getByRole('banner').getByRole('button', { name: /^Cart/ })
+    // The stored quantity is written back clamped, so the badge shows the stock
+    await expect(cartButton).toHaveAccessibleName('Cart, 1 item')
+    await expect(async () => {
+      await cartButton.click()
+      await expect(drawer).toBeVisible({ timeout: 1000 })
+    }).toPass()
+    await expect(drawer.getByText('Only 1 left; we updated your quantity')).toBeVisible()
+    await expect(drawer.locator('output')).toHaveText('1')
+    await expect(drawer.getByTestId('cart-subtotal')).toHaveText('₹449')
+  } finally {
+    await restore()
+  }
 })
