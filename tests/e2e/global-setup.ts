@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process'
+import { rmSync } from 'node:fs'
 
 import { testDbUri } from '../helpers/testDbUri'
 
@@ -10,6 +11,9 @@ const TEST_DATABASE_URI = testDbUri()
  */
 export default async function globalSetup() {
   const env = { ...process.env, DATABASE_URI: TEST_DATABASE_URI }
+  // Next's data cache persists on disk across dev-server runs; entries from a previous run describe a
+  // database that no longer exists, and invalidation tags live in memory only. Start every run cold.
+  rmSync('.next/cache/fetch-cache', { recursive: true, force: true })
   // The web server is started first, but its readiness URL is a static file, so it holds no DB connections yet.
   execSync('pnpm db:reset:test', { stdio: 'inherit', env })
   execSync('pnpm seed', { stdio: 'inherit', env })

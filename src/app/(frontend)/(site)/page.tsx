@@ -1,10 +1,46 @@
 import React from 'react'
 
-// Placeholder: Task 3 builds the real homepage.
-export default function HomePage() {
+import { CategoryTiles } from '@/components/home/CategoryTiles'
+import { Hero } from '@/components/home/Hero'
+import { ProductGrid } from '@/components/home/ProductGrid'
+import { TrustRow } from '@/components/home/TrustRow'
+import { WhyDirect, type Marketplace } from '@/components/home/WhyDirect'
+import { getCurated, listCategories, listProducts } from '@/lib/data/catalog'
+import { getHomepage, getStoreSettings } from '@/lib/data/globals'
+import type { Product } from '@/payload-types'
+
+export default async function HomePage() {
+  const [homepage, settings, categories, allProducts] = await Promise.all([
+    getHomepage(),
+    getStoreSettings(),
+    listCategories(),
+    listProducts(),
+  ])
+
+  const favourites = homepage.favouritesCollection
+  const slug = typeof favourites === 'object' && favourites ? favourites.slug : null
+  const curated = slug ? await getCurated(slug) : null
+  // Unpublished products come back as bare ids, so keep populated ones only
+  const favouriteProducts = (curated?.products ?? []).filter((p): p is Product => typeof p === 'object')
+
+  const social = settings.social
+  const marketplaces: Marketplace[] = [
+    { label: 'Amazon', href: social?.amazonStoreUrl?.trim() },
+    { label: 'Flipkart', href: social?.flipkartStoreUrl?.trim() },
+    { label: 'Meesho', href: social?.meeshoStoreUrl?.trim() },
+  ].filter((m): m is Marketplace => Boolean(m.href))
+
   return (
-    <div className="px-[18px] py-16 text-center md:px-12">
-      <h1 className="text-4xl font-extrabold tracking-tight">Reyan Collections</h1>
-    </div>
+    <>
+      <Hero hero={homepage.hero} ratings={social?.ratings} />
+      <TrustRow returnWindowDays={settings.commerce?.returnWindowDays ?? 7} />
+      <CategoryTiles categories={categories} />
+      <ProductGrid
+        title="This week's favourites"
+        products={favouriteProducts}
+        total={allProducts.length}
+      />
+      <WhyDirect marketplaces={marketplaces} />
+    </>
   )
 }
