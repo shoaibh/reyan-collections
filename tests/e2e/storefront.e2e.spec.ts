@@ -1,7 +1,15 @@
 import { test, expect } from '@playwright/test'
 
 test('Instagram visitor browses and fills a cart', async ({ page }) => {
-  await page.goto('/')
+  // An Instagram visitor lands on the links page first
+  await page.goto('/links')
+  await expect(page.getByRole('img', { name: 'Reyan Collections logo' })).toBeVisible()
+  const buttons = page.getByTestId('link-button')
+  await expect(buttons).toHaveCount(5)
+  await expect(buttons.first()).toContainText('Shop on our website')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  await page.getByRole('link', { name: 'Shop on our website' }).click()
+  await expect(page).toHaveURL(/\/$/)
 
   // Brand lockup and announcement bar
   await expect(page.getByRole('banner').getByRole('link', { name: 'Reyan Collections' })).toBeVisible()
@@ -57,6 +65,25 @@ test('Instagram visitor browses and fills a cart', async ({ page }) => {
 
   // The page ends on the "why buy directly" band
   await expect(page.getByRole('heading', { name: 'Why buy directly from us?' })).toBeVisible()
+
+  // Category listing
+  await tiles.getByRole('link', { name: /Kitchen & Home/ }).click()
+  await expect(page).toHaveURL(/\/c\/kitchen-and-home$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Kitchen & Home' })).toBeVisible()
+  const cards = page.getByTestId('product-card')
+  await expect(cards).toHaveCount(2)
+  await expect(cards.filter({ hasText: 'Mexico premium container, set of 2' })).toHaveCount(1)
+  await expect(cards.filter({ hasText: 'Portable juicer, 400 ml, USB charging' })).toHaveCount(1)
+
+  // Search from the header (a phone shows a search icon that opens /shop)
+  await page.getByRole('banner').getByRole('link', { name: 'Search products' }).click()
+  await expect(page).toHaveURL(/\/shop$/)
+  const search = page.getByRole('search').getByRole('searchbox', { name: 'Search products' })
+  await search.fill('duck')
+  await search.press('Enter')
+  await expect(page.getByRole('heading', { level: 1, name: 'Results for "duck"' })).toBeVisible()
+  await expect(cards).toHaveCount(1)
+  await expect(cards.filter({ hasText: 'Duck climbing track toy with music' })).toBeVisible()
 })
 
 test('hero without a featured product still renders', async ({ page, request }) => {
