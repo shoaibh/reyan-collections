@@ -1,6 +1,7 @@
 import type { GlobalConfig } from 'payload'
 
 import { isAdmin } from '../access/isAdmin'
+import { safeUrl } from '../lib/validators'
 import { revalidate } from '../lib/revalidate'
 
 export const LinksPage: GlobalConfig = {
@@ -25,7 +26,7 @@ export const LinksPage: GlobalConfig = {
       type: 'array',
       fields: [
         { name: 'label', type: 'text', required: true },
-        { name: 'url', type: 'text', required: true },
+        { name: 'url', type: 'text', required: true, validate: safeUrl },
         {
           name: 'iconType',
           type: 'select',

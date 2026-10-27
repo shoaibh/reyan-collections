@@ -4,13 +4,14 @@ import type {
   CollectionBeforeChangeHook,
   CollectionConfig,
   Field,
+  TextFieldSingleValidation,
 } from 'payload'
 
 import { isAdmin } from '../access/isAdmin'
 import { publishedOrAdmin } from '../access/publishedOrAdmin'
 import { slugField } from '../fields/slug'
 import { revalidate } from '../lib/revalidate'
-import { wholeNumber } from '../lib/validators'
+import { safeUrl, wholeNumber } from '../lib/validators'
 
 const marketplaceOptions = ['amazon', 'flipkart', 'meesho']
 
@@ -121,7 +122,14 @@ export const Products: CollectionConfig = {
           validate: requiredWithComparePrice('Marketplace'),
         },
         { name: 'price', type: 'number', validate: wholeNumber(1) },
-        { name: 'url', type: 'text', validate: requiredWithComparePrice('URL') },
+        {
+          name: 'url',
+          type: 'text',
+          validate: ((value, args) => {
+            const required = requiredWithComparePrice('URL')(value, args)
+            return required === true ? safeUrl(value, args) : required
+          }) as TextFieldSingleValidation,
+        },
         {
           name: 'checkedOn',
           type: 'date',
@@ -134,7 +142,7 @@ export const Products: CollectionConfig = {
       type: 'array',
       fields: [
         { name: 'marketplace', type: 'select', options: marketplaceOptions, required: true },
-        { name: 'url', type: 'text', required: true },
+        { name: 'url', type: 'text', required: true, validate: safeUrl },
       ],
     },
     {

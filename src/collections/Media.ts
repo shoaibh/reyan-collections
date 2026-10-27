@@ -2,9 +2,22 @@ import { APIError } from 'payload'
 import type { CollectionConfig, ImageSize } from 'payload'
 
 import { isAdmin } from '../access/isAdmin'
+import { revalidate } from '../lib/revalidate'
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
+
+// Every storefront tag whose cached data can embed a media doc (image src/alt)
+const MEDIA_TAGS = [
+  'products',
+  'categories',
+  'curated',
+  'pages',
+  'global:homepage',
+  'global:navigation',
+  'global:links-page',
+  'global:store-settings',
+]
 
 const size = (name: string, width: number, height?: number): ImageSize => ({
   name,
@@ -23,6 +36,18 @@ export const Media: CollectionConfig = {
     delete: isAdmin,
   },
   hooks: {
+    afterChange: [
+      ({ doc }) => {
+        revalidate(MEDIA_TAGS)
+        return doc
+      },
+    ],
+    afterDelete: [
+      ({ doc }) => {
+        revalidate(MEDIA_TAGS)
+        return doc
+      },
+    ],
     beforeOperation: [
       ({ req, operation }) => {
         if (operation !== 'create' && operation !== 'update') return

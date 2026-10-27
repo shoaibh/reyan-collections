@@ -22,13 +22,13 @@ export const Curated: CollectionConfig = {
   hooks: {
     afterChange: [
       ({ doc }) => {
-        revalidate(['curated'])
+        revalidate(['curated', 'global:navigation'])
         return doc
       },
     ],
     afterDelete: [
       ({ doc }) => {
-        revalidate(['curated'])
+        revalidate(['curated', 'global:navigation'])
         return doc
       },
     ],

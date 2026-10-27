@@ -1,7 +1,7 @@
 import type { Field, GlobalConfig, NumberFieldValidation } from 'payload'
 
 import { isAdmin, isAdminField } from '../access/isAdmin'
-import { wholeNumber } from '../lib/validators'
+import { safeUrl, wholeNumber } from '../lib/validators'
 import { revalidate } from '../lib/revalidate'
 
 const rating: NumberFieldValidation = (value) => {
@@ -67,10 +67,10 @@ export const StoreSettings: GlobalConfig = {
       name: 'social',
       type: 'group',
       fields: [
-        { name: 'instagramUrl', type: 'text' },
-        { name: 'amazonStoreUrl', type: 'text' },
-        { name: 'flipkartStoreUrl', type: 'text' },
-        { name: 'meeshoStoreUrl', type: 'text' },
+        { name: 'instagramUrl', type: 'text', validate: safeUrl },
+        { name: 'amazonStoreUrl', type: 'text', validate: safeUrl },
+        { name: 'flipkartStoreUrl', type: 'text', validate: safeUrl },
+        { name: 'meeshoStoreUrl', type: 'text', validate: safeUrl },
         {
           name: 'ratings',
           type: 'group',

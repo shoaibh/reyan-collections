@@ -88,7 +88,7 @@ export function LinkButton({
       </span>
     </>
   )
-  return url.startsWith('/') ? (
+  return url.startsWith('/') && !url.startsWith('//') ? (
     <Link href={url} data-testid="link-button" className={className}>
       {inner}
     </Link>

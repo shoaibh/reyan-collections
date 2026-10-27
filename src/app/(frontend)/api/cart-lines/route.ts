@@ -41,7 +41,7 @@ export async function GET(request: Request) {
   if (parts.length > MAX_ITEMS) return bad('Too many items')
   const pairs: { productId: number; variantId: string }[] = []
   for (const part of parts) {
-    const match = /^([0-9]{1,12}):([A-Za-z0-9_-]{1,64})$/.exec(part)
+    const match = /^([0-9]{1,9}):([A-Za-z0-9_-]{1,64})$/.exec(part)
     if (!match) return bad('Invalid items')
     pairs.push({ productId: Number(match[1]), variantId: match[2]! })
   }

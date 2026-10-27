@@ -20,31 +20,33 @@ export const normaliseQuery = (q?: string): string => (q ?? '').trim().slice(0, 
 
 export const listProducts = (opts: ListProductsOptions = {}): Promise<Product[]> => {
   const q = normaliseQuery(opts.q)
-  return cached(
-    async () => {
-      const payload = await getClient()
-      const and: Where[] = []
-      if (opts.categorySlug) and.push({ 'category.slug': { equals: opts.categorySlug } })
-      if (q) {
-        and.push({
-          or: [{ title: { like: q } }, { shortDescription: { like: q } }],
-        })
-      }
-      const { docs } = await payload.find({
-        collection: 'products',
-        where: and.length ? { and } : undefined,
-        sort: sortField[opts.sort ?? 'featured'],
-        limit: 200,
-        pagination: false,
-        depth: 2,
-        draft: false,
-        overrideAccess: false,
+  const load = async () => {
+    const payload = await getClient()
+    const and: Where[] = []
+    if (opts.categorySlug) and.push({ 'category.slug': { equals: opts.categorySlug } })
+    if (q) {
+      and.push({
+        or: [{ title: { like: q } }, { shortDescription: { like: q } }],
       })
-      return docs
-    },
-    ['products', 'list', opts.categorySlug ?? '', q, opts.sort ?? 'featured'],
-    ['products', 'categories'],
-  )()
+    }
+    const { docs } = await payload.find({
+      collection: 'products',
+      where: and.length ? { and } : undefined,
+      sort: sortField[opts.sort ?? 'featured'],
+      limit: 200,
+      pagination: false,
+      depth: 2,
+      draft: false,
+      overrideAccess: false,
+    })
+    return docs
+  }
+  // Free-text searches are unbounded, so they bypass the data cache rather than filling it
+  if (q) return load()
+  return cached(load, ['products', 'list', opts.categorySlug ?? '', '', opts.sort ?? 'featured'], [
+    'products',
+    'categories',
+  ])()
 }
 
 export const getProduct = (slug: string): Promise<Product | null> =>

@@ -19,13 +19,13 @@ export const Categories: CollectionConfig = {
   hooks: {
     afterChange: [
       ({ doc }) => {
-        revalidate(['categories', 'products'])
+        revalidate(['categories', 'products', 'global:navigation'])
         return doc
       },
     ],
     afterDelete: [
       ({ doc }) => {
-        revalidate(['categories', 'products'])
+        revalidate(['categories', 'products', 'global:navigation'])
         return doc
       },
     ],

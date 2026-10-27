@@ -20,10 +20,14 @@ try {
   const counts = await seed(payload)
   console.log(`Seeded ${counts.products} products and ${counts.categories} categories`)
   // Seeding runs outside Next, so revalidation hooks no-op; drop the persisted data cache instead
-  if (existsSync('.next/cache/fetch-cache')) {
-    rmSync('.next/cache/fetch-cache', { recursive: true, force: true })
-    console.log('Cleared storefront cache')
+  let cleared = false
+  for (const dir of ['.next/cache/fetch-cache', '.next/dev/cache/fetch-cache']) {
+    if (existsSync(dir)) {
+      rmSync(dir, { recursive: true, force: true })
+      cleared = true
+    }
   }
+  if (cleared) console.log('Cleared storefront cache')
   process.exit(0)
 } catch (error) {
   console.error(error)

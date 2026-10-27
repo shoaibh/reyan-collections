@@ -22,7 +22,7 @@ export const Pages: CollectionConfig = {
   hooks: {
     afterChange: [
       ({ doc, previousDoc }) => {
-        const tags = ['pages']
+        const tags = ['pages', 'global:navigation']
         if (doc?.slug) tags.push(`page:${doc.slug}`)
         if (previousDoc?.slug && previousDoc.slug !== doc?.slug) tags.push(`page:${previousDoc.slug}`)
         revalidate(tags)
@@ -31,7 +31,7 @@ export const Pages: CollectionConfig = {
     ],
     afterDelete: [
       ({ doc }) => {
-        revalidate(['pages', ...(doc?.slug ? [`page:${doc.slug}`] : [])])
+        revalidate(['pages', 'global:navigation', ...(doc?.slug ? [`page:${doc.slug}`] : [])])
         return doc
       },
     ],

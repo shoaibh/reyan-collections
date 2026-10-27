@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const raw = new URL(request.url).searchParams.get('ids') ?? ''
   const parts = raw.split(',')
   if (parts.length > MAX_IDS) return bad('Too many ids')
-  if (!parts.every((p) => /^[0-9]+$/.test(p))) return bad('Invalid ids')
+  if (!parts.every((p) => /^[0-9]{1,9}$/.test(p))) return bad('Invalid ids')
   const ids = [...new Set(parts.map(Number))]
 
   const payload = await getClient()
