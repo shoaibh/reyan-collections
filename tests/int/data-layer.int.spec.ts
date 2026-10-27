@@ -19,6 +19,11 @@ describe('storefront data layer', () => {
     await wipe(payload)
   })
 
+  it('caps and trims the search query', async () => {
+    expect(await listProducts({ q: 'duck' + 'x'.repeat(500) })).toHaveLength(0)
+    expect(await listProducts({ q: '  duck  ' })).toHaveLength(1)
+  })
+
   it('reads published content only, through the whole catalog journey', async () => {
     const container = await getProduct('mexico-premium-container-set-of-2')
     expect(container?.variants.map((v) => v.name)).toEqual(['Mint', 'Sand'])

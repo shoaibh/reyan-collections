@@ -5,7 +5,7 @@ import React, { Suspense } from 'react'
 import { ListingHeader } from '@/components/listing/ListingHeader'
 import { ProductsGrid } from '@/components/listing/ProductsGrid'
 import { SortSelect } from '@/components/listing/SortSelect'
-import { listCategories, listProducts, type ProductSort } from '@/lib/data/catalog'
+import { listCategories, listProducts, normaliseQuery, type ProductSort } from '@/lib/data/catalog'
 
 type SearchParams = Promise<{ q?: string; category?: string; sort?: string }>
 
@@ -13,7 +13,7 @@ const sorts: ProductSort[] = ['featured', 'price-asc', 'price-desc']
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
 
 export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
-  const q = one((await searchParams).q)?.trim()
+  const q = normaliseQuery(one((await searchParams).q))
   return { title: q ? `Results for "${q}" | Reyan Collections` : 'Shop all | Reyan Collections' }
 }
 
@@ -22,7 +22,7 @@ const chip =
 
 export default async function ShopPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams
-  const q = one(sp.q)?.trim() || undefined
+  const q = normaliseQuery(one(sp.q)) || undefined
   const category = one(sp.category) || undefined
   const sort = sorts.find((s) => s === one(sp.sort)) ?? 'featured'
 
@@ -47,6 +47,7 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
       <form action="/shop" method="get" role="search" className="mb-4 md:hidden">
         <input
           type="search"
+          maxLength={80}
           name="q"
           defaultValue={q}
           placeholder="Search products…"

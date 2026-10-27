@@ -47,6 +47,7 @@ export function MobileMenu({ links }: { links: NavLink[] }) {
         <form action="/shop" method="get" role="search" className="mt-3 flex gap-2">
           <input
             type="search"
+            maxLength={80}
             name="q"
             placeholder="Search…"
             aria-label="Search products"

@@ -14,14 +14,18 @@ const sortField: Record<ProductSort, string> = {
   'price-desc': '-price',
 }
 
-export const listProducts = (opts: ListProductsOptions = {}): Promise<Product[]> =>
-  cached(
+export const MAX_QUERY_LENGTH = 80
+
+export const normaliseQuery = (q?: string): string => (q ?? '').trim().slice(0, MAX_QUERY_LENGTH)
+
+export const listProducts = (opts: ListProductsOptions = {}): Promise<Product[]> => {
+  const q = normaliseQuery(opts.q)
+  return cached(
     async () => {
       const payload = await getClient()
       const and: Where[] = []
       if (opts.categorySlug) and.push({ 'category.slug': { equals: opts.categorySlug } })
-      if (opts.q?.trim()) {
-        const q = opts.q.trim()
+      if (q) {
         and.push({
           or: [{ title: { like: q } }, { shortDescription: { like: q } }],
         })
@@ -38,9 +42,10 @@ export const listProducts = (opts: ListProductsOptions = {}): Promise<Product[]>
       })
       return docs
     },
-    ['products', 'list', opts.categorySlug ?? '', opts.q?.trim() ?? '', opts.sort ?? 'featured'],
+    ['products', 'list', opts.categorySlug ?? '', q, opts.sort ?? 'featured'],
     ['products', 'categories'],
   )()
+}
 
 export const getProduct = (slug: string): Promise<Product | null> =>
   cached(
