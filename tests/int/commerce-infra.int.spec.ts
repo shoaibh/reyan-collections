@@ -115,4 +115,70 @@ describe('commerce infrastructure', () => {
       maxPerOrder: 5,
     })
   })
+
+  describe('latest-version stock sync', () => {
+    const stocksOf = async (): Promise<{ live: number; version: number }> => {
+      const live = await payload.findByID({ collection: 'products', id: productId, draft: false, depth: 0 })
+      const ver = await payload.findByID({ collection: 'products', id: productId, draft: true, depth: 0 })
+      return {
+        live: live.variants!.find((v) => v.id === mintId)!.stock,
+        version: ver.variants!.find((v) => v.id === mintId)!.stock,
+      }
+    }
+
+    it('reserveStock lowers both live and latest-version stock', async () => {
+      const db = await drizzleFor(payload)
+      try {
+        await withTransaction(payload, (tx) => reserveStock(tx.db, [{ productId, variantId: mintId, qty: 2 }]))
+        expect(await stocksOf()).toEqual({ live: 4, version: 4 })
+      } finally {
+        await releaseStock(db, [{ productId, variantId: mintId, qty: 2 }])
+      }
+    })
+
+    it('releaseStock restores both live and latest-version stock', async () => {
+      const db = await drizzleFor(payload)
+      await withTransaction(payload, (tx) => reserveStock(tx.db, [{ productId, variantId: mintId, qty: 2 }]))
+      await releaseStock(db, [{ productId, variantId: mintId, qty: 2 }])
+      expect(await stocksOf()).toEqual({ live: 6, version: 6 })
+    })
+
+    it('a failed reservation leaves live and latest-version stock unchanged', async () => {
+      const bad = await withTransaction(payload, (tx) =>
+        reserveStock(tx.db, [
+          { productId, variantId: mintId, qty: 1 },
+          { productId, variantId: sandId, qty: 99 },
+        ]),
+      )
+      expect(bad.ok).toBe(false)
+      expect(await stocksOf()).toEqual({ live: 6, version: 6 })
+    })
+
+    it('the owner can re-set stock to the number shown on the edit screen after a sale', async () => {
+      const db = await drizzleFor(payload)
+      try {
+        await withTransaction(payload, (tx) => reserveStock(tx.db, [{ productId, variantId: mintId, qty: 2 }]))
+        expect(await stocksOf()).toEqual({ live: 4, version: 4 })
+        const shown = await payload.findByID({ collection: 'products', id: productId, draft: true, depth: 0 })
+        await payload.update({
+          collection: 'products',
+          id: productId,
+          draft: false,
+          depth: 0,
+          data: {
+            _status: 'published',
+            variants: shown.variants!.map((v) =>
+              v.id === mintId ? { ...v, stock: 6, stockAtLoad: 4 } : { ...v, stockAtLoad: v.stock },
+            ),
+          },
+        })
+        expect((await stocksOf()).live).toBe(6)
+      } finally {
+        await db.execute(sql`UPDATE products_variants SET stock = 6 WHERE id = ${mintId}`)
+        await db.execute(
+          sql`UPDATE _products_v_version_variants SET stock = 6 WHERE _uuid = ${mintId}`,
+        )
+      }
+    })
+  })
 })
