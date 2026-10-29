@@ -11,6 +11,11 @@ import { Categories } from './collections/Categories'
 import { Curated } from './collections/Curated'
 import { Products } from './collections/Products'
 import { Pages } from './collections/Pages'
+import { Orders } from './collections/Orders'
+import { DiscountCodes } from './collections/DiscountCodes'
+import { CodBlocklist } from './collections/CodBlocklist'
+import { RateLimits } from './collections/RateLimits'
+import { Counters } from './collections/Counters'
 import { Homepage } from './globals/Homepage'
 import { Navigation } from './globals/Navigation'
 import { LinksPage } from './globals/LinksPage'
@@ -37,7 +42,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Categories, Curated, Products, Pages],
+  collections: [Users, Media, Categories, Curated, Products, Pages, Orders, DiscountCodes, CodBlocklist, RateLimits, Counters],
   globals: [Homepage, Navigation, LinksPage, StoreSettings],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',

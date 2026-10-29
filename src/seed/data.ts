@@ -125,3 +125,14 @@ export const linksData = {
     { label: 'Meesho store', url: 'https://example.com/meesho', iconType: 'meesho' },
   ],
 } as const
+
+export const seedDiscountCode = {
+  code: 'DIWALI10',
+  type: 'percent',
+  value: 10,
+  maxDiscount: 150,
+  minOrderValue: 499,
+  perPhoneLimit: 1,
+  active: true,
+  note: 'Instagram Diwali reel',
+} as const

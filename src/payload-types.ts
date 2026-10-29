@@ -73,6 +73,11 @@ export interface Config {
     curated: Curated;
     products: Product;
     pages: Page;
+    orders: Order;
+    'discount-codes': DiscountCode;
+    'cod-blocklist': CodBlocklist;
+    'rate-limits': RateLimit;
+    counters: Counter;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -86,6 +91,11 @@ export interface Config {
     curated: CuratedSelect<false> | CuratedSelect<true>;
     products: ProductsSelect<false> | ProductsSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
+    orders: OrdersSelect<false> | OrdersSelect<true>;
+    'discount-codes': DiscountCodesSelect<false> | DiscountCodesSelect<true>;
+    'cod-blocklist': CodBlocklistSelect<false> | CodBlocklistSelect<true>;
+    'rate-limits': RateLimitsSelect<false> | RateLimitsSelect<true>;
+    counters: CountersSelect<false> | CountersSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -365,6 +375,177 @@ export interface Page {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders".
+ */
+export interface Order {
+  id: number;
+  orderNumber: string;
+  accessToken: string;
+  status:
+    | 'pending_payment'
+    | 'awaiting_confirmation'
+    | 'confirmed'
+    | 'ready_to_ship'
+    | 'shipped'
+    | 'out_for_delivery'
+    | 'delivered'
+    | 'rto'
+    | 'returned'
+    | 'cancelled';
+  paymentMethod?: ('prepaid' | 'cod') | null;
+  paymentStatus?: ('unpaid' | 'paid' | 'refunded' | 'cod_pending' | 'cod_collected') | null;
+  customer?: {
+    name?: string | null;
+    phone?: string | null;
+    email?: string | null;
+  };
+  address?: {
+    line1?: string | null;
+    line2?: string | null;
+    landmark?: string | null;
+    city?: string | null;
+    state?: string | null;
+    stateCode?: string | null;
+    pincode?: string | null;
+  };
+  items?:
+    | {
+        productId?: number | null;
+        variantId?: string | null;
+        title?: string | null;
+        variantName?: string | null;
+        slug?: string | null;
+        unitPrice?: number | null;
+        qty?: number | null;
+        hsnCode?: string | null;
+        gstRate?: number | null;
+        weightGrams?: number | null;
+        lengthCm?: number | null;
+        widthCm?: number | null;
+        heightCm?: number | null;
+        id?: string | null;
+      }[]
+    | null;
+  subtotal?: number | null;
+  discountCode?: string | null;
+  codeDiscount?: number | null;
+  shippingFee?: number | null;
+  prepaidDiscount?: number | null;
+  total?: number | null;
+  razorpay?: {
+    orderId?: string | null;
+    paymentId?: string | null;
+    refundId?: string | null;
+  };
+  shipment?: {
+    shiprocketOrderId?: string | null;
+    shipmentId?: string | null;
+    awb?: string | null;
+    courierName?: string | null;
+    trackingUrl?: string | null;
+    labelUrl?: string | null;
+    events?:
+      | {
+          status?: string | null;
+          at?: string | null;
+          raw?:
+            | {
+                [k: string]: unknown;
+              }
+            | unknown[]
+            | string
+            | number
+            | boolean
+            | null;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  invoice?: {
+    number?: string | null;
+    issuedAt?: string | null;
+  };
+  timeline?:
+    | {
+        status?: string | null;
+        at?: string | null;
+        by?: ('system' | 'admin') | null;
+        note?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  meta?: {
+    ipHash?: string | null;
+    userAgent?: string | null;
+    turnstileVerified?: boolean | null;
+    idempotencyKey?: string | null;
+  };
+  alert?: {
+    message?: string | null;
+    handled?: boolean | null;
+  };
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "discount-codes".
+ */
+export interface DiscountCode {
+  id: number;
+  code: string;
+  type: 'percent' | 'flat';
+  value: number;
+  maxDiscount?: number | null;
+  minOrderValue?: number | null;
+  validFrom?: string | null;
+  validUntil?: string | null;
+  usageLimit?: number | null;
+  perPhoneLimit?: number | null;
+  active?: boolean | null;
+  note?: string | null;
+  usage?: {
+    timesUsed?: number | null;
+    revenue?: number | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cod-blocklist".
+ */
+export interface CodBlocklist {
+  id: number;
+  phone: string;
+  reason?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "rate-limits".
+ */
+export interface RateLimit {
+  id: number;
+  key: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "counters".
+ */
+export interface Counter {
+  id: number;
+  key: string;
+  lastNumber: number;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -410,6 +591,26 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'pages';
         value: number | Page;
+      } | null)
+    | ({
+        relationTo: 'orders';
+        value: number | Order;
+      } | null)
+    | ({
+        relationTo: 'discount-codes';
+        value: number | DiscountCode;
+      } | null)
+    | ({
+        relationTo: 'cod-blocklist';
+        value: number | CodBlocklist;
+      } | null)
+    | ({
+        relationTo: 'rate-limits';
+        value: number | RateLimit;
+      } | null)
+    | ({
+        relationTo: 'counters';
+        value: number | Counter;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -668,6 +869,170 @@ export interface PagesSelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders_select".
+ */
+export interface OrdersSelect<T extends boolean = true> {
+  orderNumber?: T;
+  accessToken?: T;
+  status?: T;
+  paymentMethod?: T;
+  paymentStatus?: T;
+  customer?:
+    | T
+    | {
+        name?: T;
+        phone?: T;
+        email?: T;
+      };
+  address?:
+    | T
+    | {
+        line1?: T;
+        line2?: T;
+        landmark?: T;
+        city?: T;
+        state?: T;
+        stateCode?: T;
+        pincode?: T;
+      };
+  items?:
+    | T
+    | {
+        productId?: T;
+        variantId?: T;
+        title?: T;
+        variantName?: T;
+        slug?: T;
+        unitPrice?: T;
+        qty?: T;
+        hsnCode?: T;
+        gstRate?: T;
+        weightGrams?: T;
+        lengthCm?: T;
+        widthCm?: T;
+        heightCm?: T;
+        id?: T;
+      };
+  subtotal?: T;
+  discountCode?: T;
+  codeDiscount?: T;
+  shippingFee?: T;
+  prepaidDiscount?: T;
+  total?: T;
+  razorpay?:
+    | T
+    | {
+        orderId?: T;
+        paymentId?: T;
+        refundId?: T;
+      };
+  shipment?:
+    | T
+    | {
+        shiprocketOrderId?: T;
+        shipmentId?: T;
+        awb?: T;
+        courierName?: T;
+        trackingUrl?: T;
+        labelUrl?: T;
+        events?:
+          | T
+          | {
+              status?: T;
+              at?: T;
+              raw?: T;
+              id?: T;
+            };
+      };
+  invoice?:
+    | T
+    | {
+        number?: T;
+        issuedAt?: T;
+      };
+  timeline?:
+    | T
+    | {
+        status?: T;
+        at?: T;
+        by?: T;
+        note?: T;
+        id?: T;
+      };
+  meta?:
+    | T
+    | {
+        ipHash?: T;
+        userAgent?: T;
+        turnstileVerified?: T;
+        idempotencyKey?: T;
+      };
+  alert?:
+    | T
+    | {
+        message?: T;
+        handled?: T;
+      };
+  notes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "discount-codes_select".
+ */
+export interface DiscountCodesSelect<T extends boolean = true> {
+  code?: T;
+  type?: T;
+  value?: T;
+  maxDiscount?: T;
+  minOrderValue?: T;
+  validFrom?: T;
+  validUntil?: T;
+  usageLimit?: T;
+  perPhoneLimit?: T;
+  active?: T;
+  note?: T;
+  usage?:
+    | T
+    | {
+        timesUsed?: T;
+        revenue?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cod-blocklist_select".
+ */
+export interface CodBlocklistSelect<T extends boolean = true> {
+  phone?: T;
+  reason?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "rate-limits_select".
+ */
+export interface RateLimitsSelect<T extends boolean = true> {
+  key?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "counters_select".
+ */
+export interface CountersSelect<T extends boolean = true> {
+  key?: T;
+  lastNumber?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

@@ -1,7 +1,7 @@
 import path from 'node:path'
 import type { Payload } from 'payload'
 
-import { announcements, heroData, linksData, seedCategories, seedProducts } from './data'
+import { announcements, heroData, linksData, seedCategories, seedDiscountCode, seedProducts } from './data'
 import { assertSeedAllowed } from './guard'
 import { lexicalDoc } from './lexical'
 import { seedPages } from './pages'
@@ -22,7 +22,17 @@ export async function wipe(payload: Payload) {
       favouritesCollection: null,
     },
   })
-  for (const collection of ['curated', 'products', 'categories', 'pages', 'media'] as const) {
+  for (const collection of [
+    'orders',
+    'discount-codes',
+    'cod-blocklist',
+    'rate-limits',
+    'counters',
+    'curated', 'products',
+    'categories',
+    'pages',
+    'media',
+  ] as const) {
     await payload.delete({ collection, where: { id: { exists: true } } })
   }
 }
@@ -100,6 +110,8 @@ export async function seed(payload: Payload): Promise<{ products: number; catego
     })
     products.push(product)
   }
+
+  await payload.create({ collection: 'discount-codes', data: { ...seedDiscountCode } })
 
   const favourites = await payload.create({
     collection: 'curated',
