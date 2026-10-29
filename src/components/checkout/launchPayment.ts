@@ -1,5 +1,10 @@
 import type { PaymentLaunch } from '@/lib/commerce/paymentLaunch'
 
+/** A PaymentLaunch whose prefill may omit contact and email (the order page sends name only). */
+export type LaunchInput = Omit<PaymentLaunch, 'prefill'> & {
+  prefill: { name: string; contact?: string; email?: string }
+}
+
 type RazorpayHandlerResponse = {
   razorpay_order_id: string
   razorpay_payment_id: string
@@ -12,7 +17,7 @@ type RazorpayOptions = {
   currency: string
   name: string
   timeout: number
-  prefill: PaymentLaunch['prefill']
+  prefill: LaunchInput['prefill']
   handler: (response: RazorpayHandlerResponse) => void
   modal: { ondismiss: () => void }
 }
@@ -29,24 +34,25 @@ function loadScript(): Promise<void> {
   if (window.Razorpay) return Promise.resolve()
   scriptPromise ??= new Promise<void>((resolve, reject) => {
     const el = document.createElement('script')
-    el.src = SCRIPT_SRC
-    el.async = true
-    el.onload = () => resolve()
-    el.onerror = () => {
+    const fail = () => {
       scriptPromise = null
+      el.remove()
       reject(new Error('Could not load the payment window'))
     }
+    el.src = SCRIPT_SRC
+    el.async = true
+    el.onload = () => (window.Razorpay ? resolve() : fail())
+    el.onerror = fail
     document.head.appendChild(el)
   })
   return scriptPromise
 }
 
 /** Opens the payment step: the dev mock page, or Razorpay Checkout in live mode. */
-export async function launchPayment(p: PaymentLaunch): Promise<void> {
+export async function launchPayment(p: LaunchInput): Promise<void> {
   if (p.mode === 'mock') {
-    // Full page load on purpose: the mock page is outside the client router's flow
-    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    window.location.assign('/dev/mock-pay?order=' + encodeURIComponent(p.razorpayOrderId))
+    const path = '/dev/mock-pay?order=' + encodeURIComponent(p.razorpayOrderId)
+    window.location.assign(new URL(path, window.location.origin).href)
     return
   }
   await loadScript()

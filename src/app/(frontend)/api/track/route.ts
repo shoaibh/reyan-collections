@@ -16,8 +16,17 @@ export async function POST(request: Request) {
     // handled by the validation below
   }
   const { orderNumber, phone } = body
-  if (typeof orderNumber !== 'string' || typeof phone !== 'string' || !orderNumber.trim() || orderNumber.length > 20) {
-    return Response.json({ error: 'Enter your order number and mobile number.' }, { status: 400, headers })
+  if (
+    typeof orderNumber !== 'string' ||
+    typeof phone !== 'string' ||
+    !orderNumber.trim() ||
+    orderNumber.length > 20 ||
+    phone.length > 20
+  ) {
+    return Response.json(
+      { error: 'Enter your order number and mobile number.' },
+      { status: 400, headers },
+    )
   }
 
   const payload = await getClient()
@@ -26,12 +35,18 @@ export async function POST(request: Request) {
     windowMs: 3_600_000,
   })
   if (!allowed) {
-    return Response.json({ error: 'Too many attempts. Please try again in an hour.' }, { status: 429, headers })
+    return Response.json(
+      { error: 'Too many attempts. Please try again in an hour.' },
+      { status: 429, headers },
+    )
   }
 
   const url = await findOrderUrl(payload, orderNumber, phone)
   if (!url) {
-    return Response.json({ error: "We couldn't find an order with that number and phone." }, { status: 404, headers })
+    return Response.json(
+      { error: "We couldn't find an order with that number and phone." },
+      { status: 404, headers },
+    )
   }
   return Response.json({ url }, { headers })
 }

@@ -3,9 +3,9 @@
 import React, { useState } from 'react'
 
 import { launchPayment } from '@/components/checkout/launchPayment'
-import type { PaymentLaunch } from '@/lib/commerce/paymentLaunch'
+import type { CustomerPaymentLaunch } from '@/lib/commerce/customerOrder'
 
-export function PayAgainButton({ payment }: { payment: PaymentLaunch }) {
+export function PayAgainButton({ payment }: { payment: CustomerPaymentLaunch }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

@@ -11,6 +11,8 @@ import { buildPaymentLaunch, orderUrl, type PaymentLaunch } from './paymentLaunc
 import type { PaymentMethod, Totals } from './pricing'
 import { loadCommerceSettings } from './settings'
 
+export type CustomerPaymentLaunch = Omit<PaymentLaunch, 'prefill'> & { prefill: { name: string } }
+
 export type CustomerOrderView = {
   orderNumber: string
   status: OrderStatus
@@ -25,7 +27,7 @@ export type CustomerOrderView = {
   shipTo: { name: string; phone: string; place: string }
   step: 0 | 1 | 2 | 3
   trackingUrl: string | null
-  payment: PaymentLaunch | null
+  payment: CustomerPaymentLaunch | null
   whatsappUrl: string | null
 }
 
@@ -66,9 +68,14 @@ function stepFor(order: Order): 0 | 1 | 2 | 3 {
 
 function paymentLabelFor(order: Order): string {
   if (order.paymentStatus === 'refunded') return 'Refunded'
-  if (order.paymentStatus === 'paid' || order.paymentStatus === 'cod_collected') return 'Paid online'
   if (order.paymentMethod === 'cod') return 'Cash on delivery'
+  if (order.paymentStatus === 'paid') return 'Paid online'
   return 'Payment pending'
+}
+
+/** The browser only needs the first name-level prefill; phone and email stay on the server. */
+function customerPayment(launch: PaymentLaunch | null): CustomerPaymentLaunch | null {
+  return launch ? { ...launch, prefill: { name: launch.prefill.name } } : null
 }
 
 function tokenMatches(actual: string, given: string | null): boolean {
@@ -119,7 +126,10 @@ export async function getOrderForCustomer(
     paymentMethod: order.paymentMethod ?? 'prepaid',
     createdAt: order.createdAt,
     items: (order.items ?? []).map((i) => ({
-      label: !i.variantName || i.variantName === 'Default' ? (i.title ?? '') : `${i.title} — ${i.variantName}`,
+      label:
+        !i.variantName || i.variantName === 'Default'
+          ? (i.title ?? '')
+          : `${i.title} — ${i.variantName}`,
       qty: i.qty ?? 0,
       lineTotal: (i.unitPrice ?? 0) * (i.qty ?? 0),
     })),
@@ -138,15 +148,22 @@ export async function getOrderForCustomer(
     },
     step: stepFor(order),
     trackingUrl,
-    payment: buildPaymentLaunch(order),
+    payment: customerPayment(buildPaymentLaunch(order)),
     whatsappUrl: settings.whatsappNumber
-      ? buildWhatsAppLink(settings.whatsappNumber, `Hi, I have a question about my order ${order.orderNumber}`)
+      ? buildWhatsAppLink(
+          settings.whatsappNumber,
+          `Hi, I have a question about my order ${order.orderNumber}`,
+        )
       : null,
   }
 }
 
 /** Order number plus the phone it was placed with unlock the order link. */
-export async function findOrderUrl(payload: Payload, orderNumber: string, phone: string): Promise<string | null> {
+export async function findOrderUrl(
+  payload: Payload,
+  orderNumber: string,
+  phone: string,
+): Promise<string | null> {
   const normalized = normalizePhone(phone)
   if (!normalized) return null
   const order = await findByNumber(payload, orderNumber.trim().toUpperCase())
