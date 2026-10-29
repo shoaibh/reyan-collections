@@ -12,6 +12,10 @@ type CartContextValue = {
   add: (line: CartLine) => void
   setQty: (productId: number, variantId: string, qty: number) => void
   remove: (productId: number, variantId: string) => void
+  /** Empties the cart (after an order is placed). Persists immediately, so a hard navigation right after is safe. */
+  clear: () => void
+  /** False until the stored cart has been read after mount */
+  loaded: boolean
   count: number
   maxPerOrder: number
   /** Notices for lines clamped after live data resolved, keyed `productId:variantId` */
@@ -101,9 +105,20 @@ export function CartProvider({
     [],
   )
 
+  const clear = useCallback(() => {
+    setLines([])
+    setNotices({})
+    try {
+      // Written now, not by the effect: a hard navigation can follow before effects flush
+      window.localStorage.setItem(STORAGE_KEY, '[]')
+    } catch {
+      // storage unavailable: the cart lives in memory only
+    }
+  }, [])
+
   const value = useMemo<CartContextValue>(
-    () => ({ lines, add, setQty, remove, count: badge, maxPerOrder, notices, open, setOpen }),
-    [lines, add, setQty, remove, badge, maxPerOrder, notices, open],
+    () => ({ lines, add, setQty, remove, clear, loaded, count: badge, maxPerOrder, notices, open, setOpen }),
+    [lines, add, setQty, remove, clear, loaded, badge, maxPerOrder, notices, open],
   )
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>
