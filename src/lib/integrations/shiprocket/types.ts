@@ -10,6 +10,7 @@ export interface ServiceabilityResult {
   codAvailable: boolean
   etaDays?: { min: number; max: number }
   city?: string
+  state?: string
 }
 
 export interface ShiprocketClient {

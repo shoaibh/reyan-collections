@@ -18,6 +18,15 @@ export const mockShiprocket: ShiprocketClient = {
     if (deliveryPincode === '111111') {
       return { serviceable: true, codAvailable: false, etaDays: { min: 3, max: 5 } }
     }
+    if (deliveryPincode === '226001') {
+      return {
+        serviceable: true,
+        codAvailable: true,
+        etaDays: { min: 3, max: 5 },
+        city: 'Lucknow',
+        state: 'Uttar Pradesh',
+      }
+    }
     return { serviceable: true, codAvailable: true, etaDays: { min: 3, max: 5 } }
   },
 }
