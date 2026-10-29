@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import React from 'react'
 
+import { isSitePath } from '@/lib/validators'
+
 type IconType = 'shop' | 'whatsapp' | 'amazon' | 'flipkart' | 'meesho' | 'instagram' | 'link'
 
 const iconBg: Record<IconType, string> = {
@@ -88,11 +90,21 @@ export function LinkButton({
       </span>
     </>
   )
-  return url.startsWith('/') && !url.startsWith('//') ? (
-    <Link href={url} data-testid="link-button" className={className}>
-      {inner}
-    </Link>
-  ) : (
+  if (isSitePath(url)) {
+    return (
+      <Link href={url} data-testid="link-button" className={className}>
+        {inner}
+      </Link>
+    )
+  }
+  let external = false
+  try {
+    external = new URL(url).protocol === 'https:'
+  } catch {
+    external = false
+  }
+  if (!external) return null
+  return (
     <a href={url} target="_blank" rel="noopener noreferrer" data-testid="link-button" className={className}>
       {inner}
     </a>

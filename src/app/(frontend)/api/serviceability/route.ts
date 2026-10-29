@@ -1,10 +1,9 @@
 import { getShiprocket } from '@/lib/integrations/shiprocket'
-import { getStoreSettings } from '@/lib/data/globals'
+import { getClient } from '@/lib/data/getPayloadClient'
+import { getPickupPincode } from '@/lib/data/pickup'
 
 const headers = { 'Cache-Control': 'no-store' }
 const PINCODE = /^[0-9]{6}$/
-// Used when the business address has no pincode yet (mock mode only needs a well-formed value)
-const FALLBACK_PICKUP = '110001'
 
 const bad = (error: string) => Response.json({ error }, { status: 400, headers })
 
@@ -15,9 +14,7 @@ export async function GET(request: Request) {
   if (!PINCODE.test(pincode)) return bad('Enter a valid 6-digit pincode')
   if (!/^[0-9]{1,6}$/.test(weightRaw) || Number(weightRaw) <= 0) return bad('Invalid weight')
 
-  const settings = await getStoreSettings()
-  const configured = settings.business?.address?.pincode?.trim() ?? ''
-  const pickupPincode = PINCODE.test(configured) ? configured : FALLBACK_PICKUP
+  const pickupPincode = await getPickupPincode(await getClient())
 
   const result = await getShiprocket().checkServiceability({
     pickupPincode,

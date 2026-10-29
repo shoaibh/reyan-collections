@@ -1,3 +1,4 @@
+import { sql } from '@payloadcms/db-postgres'
 import type {
   CollectionAfterChangeHook,
   CollectionAfterDeleteHook,
@@ -10,6 +11,7 @@ import type {
 import { isAdmin } from '../access/isAdmin'
 import { publishedOrAdmin } from '../access/publishedOrAdmin'
 import { slugField } from '../fields/slug'
+import { drizzleFor } from '../lib/commerce/db'
 import { revalidate } from '../lib/revalidate'
 import { safeUrl, wholeNumber } from '../lib/validators'
 
@@ -37,8 +39,15 @@ type VariantRow = { id?: string; name?: string; stock?: number; stockAtLoad?: nu
  * stale form (or an older draft) must not write its old stock back. The admin form submits
  * `stockAtLoad` (the stock it loaded); an unchanged stock keeps the live value.
  */
-const protectVariantStock: CollectionBeforeChangeHook = ({ data, originalDoc, operation }) => {
+const protectVariantStock: CollectionBeforeChangeHook = async ({ data, originalDoc, operation, req }) => {
   if (operation !== 'update' || !Array.isArray(data?.variants)) return data
+  // `originalDoc` is the latest version, which may be a stale draft. Live stock sits in the main
+  // table, where checkout decrements it, so an untouched row takes its stock from there (R8).
+  const db = await drizzleFor(req.payload, req.transactionID)
+  const { rows } = await db.execute(
+    sql`SELECT id, stock::int AS stock FROM products_variants WHERE _parent_id = ${originalDoc.id}`,
+  )
+  const liveStock = new Map(rows.map((r) => [String(r.id), Number(r.stock)]))
   const original: VariantRow[] = Array.isArray(originalDoc?.variants) ? originalDoc.variants : []
   const originalIds = new Set(original.map((o) => o.id))
   const incoming = data.variants as VariantRow[]
@@ -57,7 +66,7 @@ const protectVariantStock: CollectionBeforeChangeHook = ({ data, originalDoc, op
     const next: VariantRow = { ...row, id: match.id }
     const untouched =
       typeof row.stockAtLoad === 'number' && row.stock === row.stockAtLoad && typeof match.stock === 'number'
-    if (untouched) next.stock = match.stock
+    if (untouched) next.stock = (match.id ? liveStock.get(match.id) : undefined) ?? match.stock
     return next
   })
   return data
