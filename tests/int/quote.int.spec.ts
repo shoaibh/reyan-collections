@@ -1,15 +1,20 @@
 import { getPayload, Payload } from 'payload'
 import config from '@/payload.config'
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { sql } from '@payloadcms/db-postgres'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { POST } from '@/app/(frontend)/api/checkout/quote/route'
+import { computeCheckout } from '@/lib/commerce/quote'
+import { drizzleFor } from '@/lib/commerce/db'
+import { mockShiprocket } from '@/lib/integrations/shiprocket/mock'
 import { seed, wipe } from '@/seed'
 
 let payload: Payload
 let mint: { productId: number; variantId: string }
 let sand: { productId: number; variantId: string }
 let karaoke: { productId: number; variantId: string }
+let duck: { productId: number; variantId: string }
 let hidden: { productId: number; variantId: string }
 
 const quote = (body: unknown, ip = '10.60.0.1', raw?: string) =>
@@ -37,6 +42,10 @@ describe('POST /api/checkout/quote', () => {
       await payload.find({ collection: 'products', where: { title: { contains: 'Karaoke' } }, limit: 1, depth: 0 })
     ).docs[0]!
     karaoke = { productId: k.id, variantId: k.variants[0]!.id as string }
+    const d = (
+      await payload.find({ collection: 'products', where: { title: { contains: 'Duck' } }, limit: 1, depth: 0 })
+    ).docs[0]!
+    duck = { productId: d.id, variantId: d.variants[0]!.id as string }
     const draftOnly = await payload.create({
       collection: 'products',
       draft: true,
@@ -157,15 +166,155 @@ describe('POST /api/checkout/quote', () => {
     })
   })
 
-  it('rejects bad input', async () => {
-    expect(await (await quote(null, '10.60.0.2', '{nope')).json()).toEqual({ error: 'Invalid request' })
-    expect((await quote(null, '10.60.0.2', '{nope')).status).toBe(400)
-    const empty = await quote({ items: [], paymentMethod: 'cod' })
-    expect(empty.status).toBe(400)
-    expect(await empty.json()).toEqual({ error: 'Your cart is empty' })
-    const noMethod = await quote({ items: [item(mint, 1)] })
-    expect(noMethod.status).toBe(400)
-    expect(await noMethod.json()).toEqual({ error: 'Invalid payment method' })
+  it('rejects malformed JSON', async () => {
+    const res = await quote(null, '10.60.0.2', '{nope')
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ error: 'Invalid request' })
+  })
+
+  it('rejects an empty cart', async () => {
+    const res = await quote({ items: [], paymentMethod: 'cod' })
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ error: 'Your cart is empty' })
+  })
+
+  it('rejects a missing payment method', async () => {
+    const res = await quote({ items: [item(mint, 1)] })
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ error: 'Invalid payment method' })
+  })
+
+  it('keeps the asked quantity in order mode', async () => {
+    const { quote: q, lines } = await computeCheckout(
+      payload,
+      { items: [item(sand, 4)], paymentMethod: 'prepaid' },
+      'order',
+    )
+    expect(lines[0]!.qty).toBe(4)
+    expect(q.lines[0]!.qty).toBe(4)
+    expect(q.issues.filter((i) => i.message.startsWith('Only'))).toEqual([])
+  })
+
+  it('clamps to the per-order maximum', async () => {
+    const body = await (await quote({ items: [item(duck, 7)], paymentMethod: 'prepaid' })).json()
+    expect(body.lines[0].qty).toBe(5)
+    expect(body.issues).toEqual([expect.objectContaining({ message: 'Max 5 per order' })])
+  })
+
+  it('drops out-of-stock variants in quote mode', async () => {
+    const db = await drizzleFor(payload)
+    await db.execute(sql`UPDATE products_variants SET stock = 0 WHERE id = ${sand.variantId}`)
+    try {
+      const body = await (await quote({ items: [item(sand, 1), item(mint, 1)], paymentMethod: 'prepaid' })).json()
+      expect(body.lines).toHaveLength(1)
+      expect(body.issues).toEqual([
+        expect.objectContaining({ variantId: sand.variantId, message: 'Out of stock' }),
+      ])
+    } finally {
+      await db.execute(sql`UPDATE products_variants SET stock = 3 WHERE id = ${sand.variantId}`)
+    }
+  })
+
+  it('has no delivery when every line is dropped', async () => {
+    const body = await (
+      await quote({
+        items: [item({ ...mint, variantId: 'nope' }, 1)],
+        pincode: '226001',
+        paymentMethod: 'prepaid',
+      })
+    ).json()
+    expect(body.lines).toEqual([])
+    expect(body.delivery).toBeNull()
+  })
+
+  describe('code usage', () => {
+    const makeCode = (code: string, data: { usageLimit?: number; perPhoneLimit?: number }) =>
+      payload.create({
+        collection: 'discount-codes',
+        data: { code, type: 'flat', value: 10, active: true, ...data },
+      })
+    const makeOrder = (code: string, status: string, phone: string, n: number) =>
+      payload.create({
+        collection: 'orders',
+        data: {
+          orderNumber: `T6-${code}-${n}`,
+          accessToken: `tok-${code}-${n}`,
+          status: status as 'cancelled',
+          discountCode: code,
+          customer: { phone },
+        },
+      })
+    const withCode = async (code: string, phone?: string) =>
+      (
+        await quote({ items: [item(mint, 1)], paymentMethod: 'prepaid', discountCode: code, phone }, '10.60.0.3')
+      ).json()
+
+    it('ignores cancelled orders for the usage limit', async () => {
+      await makeCode('LIMIT-A', { usageLimit: 1 })
+      await makeOrder('LIMIT-A', 'cancelled', '9876500071', 1)
+      const body = await withCode('LIMIT-A')
+      expect(body.codeError).toBeNull()
+      expect(body.discountCode).toBe('LIMIT-A')
+    })
+
+    it('counts live orders against the usage limit', async () => {
+      await makeCode('LIMIT-B', { usageLimit: 1 })
+      await makeOrder('LIMIT-B', 'cancelled', '9876500072', 1)
+      await makeOrder('LIMIT-B', 'confirmed', '9876500073', 2)
+      expect((await withCode('LIMIT-B')).codeError).toBe('This code has been fully used')
+    })
+
+    it('blocks a phone that already used the code', async () => {
+      await makeCode('PHONE-A', { perPhoneLimit: 1 })
+      await makeOrder('PHONE-A', 'confirmed', '9876500074', 1)
+      expect((await withCode('PHONE-A', '+91 98765 00074')).codeError).toBe("You've already used this code")
+      expect((await withCode('PHONE-A', '9876500075')).codeError).toBeNull()
+    })
+
+    it('does not count cancelled orders for the same phone', async () => {
+      await makeCode('PHONE-B', { perPhoneLimit: 1 })
+      await makeOrder('PHONE-B', 'cancelled', '9876500076', 1)
+      expect((await withCode('PHONE-B', '9876500076')).codeError).toBeNull()
+    })
+
+    it('skips the per-phone check without a phone', async () => {
+      await makeCode('PHONE-C', { perPhoneLimit: 1 })
+      await makeOrder('PHONE-C', 'confirmed', '9876500077', 1)
+      expect((await withCode('PHONE-C')).codeError).toBeNull()
+    })
+  })
+
+  describe('when Shiprocket misbehaves', () => {
+    const makeReq = () => ({ items: [item(mint, 1)], pincode: '226001', paymentMethod: 'prepaid' as const })
+
+    it('fails closed in both modes when the check throws', async () => {
+      for (const mode of ['quote', 'order'] as const) {
+        const spy = vi.spyOn(mockShiprocket, 'checkServiceability').mockRejectedValueOnce(new Error('down'))
+        const { quote: q } = await computeCheckout(payload, makeReq(), mode)
+        spy.mockRestore()
+        expect(q.delivery).toEqual({
+          pincode: '226001',
+          serviceable: false,
+          codAvailable: false,
+          etaDays: null,
+          city: null,
+          state: null,
+          message: "We couldn't check delivery right now. Please try again.",
+        })
+      }
+    })
+
+    it('never says sorry for a serviceable pincode without an ETA', async () => {
+      const spy = vi
+        .spyOn(mockShiprocket, 'checkServiceability')
+        .mockResolvedValueOnce({ serviceable: true, codAvailable: false })
+      const { quote: q } = await computeCheckout(payload, makeReq(), 'quote')
+      expect(q.delivery).toMatchObject({ serviceable: true, message: 'Delivers to 226001' })
+      spy.mockResolvedValueOnce({ serviceable: true, codAvailable: true, city: 'Lucknow' })
+      const { quote: q2 } = await computeCheckout(payload, makeReq(), 'quote')
+      spy.mockRestore()
+      expect(q2.delivery!.message).toBe('Delivers to Lucknow · COD available')
+    })
   })
 
   it('rate limits code-bearing quotes per IP', async () => {

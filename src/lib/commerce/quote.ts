@@ -2,7 +2,7 @@ import type { Payload } from 'payload'
 
 import { PINCODE_RE, normalizePhone } from '@/lib/india'
 import { getPickupPincode } from '@/lib/data/pickup'
-import { getShiprocket } from '@/lib/integrations/shiprocket'
+import { getShiprocket, type ServiceabilityResult } from '@/lib/integrations/shiprocket'
 
 import { loadCart, type CartIssue } from './cartLoader'
 import type { ItemInput } from './checkoutInput'
@@ -72,17 +72,33 @@ async function loadDelivery(
 ): Promise<DeliveryInfo | null> {
   const weightGrams = lines.reduce((sum, l) => sum + l.weightGrams * l.qty, 0)
   if (!pincode || !PINCODE_RE.test(pincode) || weightGrams <= 0) return null
-  const result = await getShiprocket().checkServiceability({
-    pickupPincode: await getPickupPincode(payload),
-    deliveryPincode: pincode,
-    weightGrams,
-    cod: true,
-  })
+  let result: ServiceabilityResult
+  try {
+    result = await getShiprocket().checkServiceability({
+      pickupPincode: await getPickupPincode(payload),
+      deliveryPincode: pincode,
+      weightGrams,
+      cod: true,
+    })
+  } catch {
+    // Fail closed: the order step turns serviceable: false into a refusal
+    return {
+      pincode,
+      serviceable: false,
+      codAvailable: false,
+      etaDays: null,
+      city: null,
+      state: null,
+      message: "We couldn't check delivery right now. Please try again.",
+    }
+  }
   const eta = result.etaDays ?? null
+  const cod = result.codAvailable ? ' · COD available' : ''
   let message = `Sorry, we can't deliver to ${pincode} yet`
-  if (result.serviceable && eta) {
-    const where = result.city ? `Delivers to ${result.city}` : 'Delivers'
-    message = `${where} in ${eta.min}–${eta.max} days${result.codAvailable ? ' · COD available' : ''}`
+  if (result.serviceable) {
+    message = eta
+      ? `${result.city ? `Delivers to ${result.city}` : 'Delivers'} in ${eta.min}–${eta.max} days${cod}`
+      : `Delivers to ${result.city ?? pincode}${cod}`
   }
   return {
     pincode,
