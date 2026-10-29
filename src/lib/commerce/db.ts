@@ -18,3 +18,29 @@ export async function drizzleFor(
   const session = id !== undefined ? adapter.sessions[id] : undefined
   return (session?.db ?? adapter.drizzle) as unknown as SqlExecutor
 }
+
+export type Tx = {
+  transactionID: string | number
+  db: SqlExecutor
+  req: { transactionID: string | number }
+}
+
+/** Begin → fn → commit; on a throw, roll back and rethrow. Pass `tx.req` to Local API calls to join it. */
+export async function withTransaction<T>(payload: Payload, fn: (tx: Tx) => Promise<T>): Promise<T> {
+  const transactionID = await payload.db.beginTransaction()
+  if (transactionID === null || transactionID === undefined) {
+    throw new Error('Database transactions are not supported by this adapter')
+  }
+  try {
+    const result = await fn({
+      transactionID,
+      db: await drizzleFor(payload, transactionID),
+      req: { transactionID },
+    })
+    await payload.db.commitTransaction(transactionID)
+    return result
+  } catch (err) {
+    await payload.db.rollbackTransaction(transactionID)
+    throw err
+  }
+}
