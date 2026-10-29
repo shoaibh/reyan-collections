@@ -1,3 +1,4 @@
+import { integrationMode } from '../mode'
 import { createLiveRazorpay } from './live'
 import { mockRazorpay } from './mock'
 import type { RazorpayClient } from './types'
@@ -5,7 +6,7 @@ import type { RazorpayClient } from './types'
 export type { RazorpayClient } from './types'
 
 export function getRazorpay(): RazorpayClient {
-  if (process.env.RAZORPAY_MODE !== 'live') return mockRazorpay
+  if (integrationMode('RAZORPAY') !== 'live') return mockRazorpay
   const keyId = process.env.RAZORPAY_KEY_ID
   const keySecret = process.env.RAZORPAY_KEY_SECRET
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET

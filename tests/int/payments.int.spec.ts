@@ -194,7 +194,7 @@ describe('payments', () => {
     expect((await reload(order.id)).status).toBe('pending_payment')
   })
 
-  it('a webhook with bad JSON gives 400, and an unrelated event gives 200', async () => {
+  it('a webhook with bad JSON gives 400', async () => {
     const raw = 'not json'
     const bad = await webhookPost(
       new Request('http://localhost/api/webhooks/razorpay', {
@@ -204,7 +204,23 @@ describe('payments', () => {
       }),
     )
     expect(bad.status).toBe(400)
+  })
+
+  it('a webhook for an unrelated event gives 200', async () => {
     expect((await webhookReq({ event: 'refund.processed', payload: {} })).status).toBe(200)
+  })
+
+  it('verify and the webhook racing for the same payment confirm the order once', async () => {
+    const { order, razorpayOrderId } = await placePrepaid()
+    const [v, w] = await Promise.all([
+      verifyReq(razorpayOrderId, 'pay_race_1'),
+      webhookReq(paidEvent(razorpayOrderId, 'pay_race_1')),
+    ])
+    expect(v.status).toBe(200)
+    expect(w.status).toBe(200)
+    const after = await reload(order.id)
+    expect(after).toMatchObject({ status: 'confirmed', paymentStatus: 'paid' })
+    expect(notes(after, 'Payment received')).toBe(1)
   })
 
   it('a late payment re-reserves stock when it is available', async () => {

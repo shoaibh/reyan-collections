@@ -1,3 +1,4 @@
+import { integrationMode } from '../mode'
 import { createLiveTurnstile } from './live'
 import { mockTurnstile } from './mock'
 import type { TurnstileClient } from './types'
@@ -7,7 +8,7 @@ export type { TurnstileClient } from './types'
 export const MOCK_TURNSTILE_TOKEN = 'mock-pass'
 
 function isLive(): boolean {
-  return process.env.TURNSTILE_MODE === 'live'
+  return integrationMode('TURNSTILE') === 'live'
 }
 
 function liveEnv(): { siteKey: string; secret: string } {

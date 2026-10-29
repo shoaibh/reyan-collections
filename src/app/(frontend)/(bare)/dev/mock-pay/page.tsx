@@ -15,8 +15,8 @@ const button = 'w-full rounded-2xl border-[3px] border-ink px-6 py-3.5 text-cent
 
 /** Stands in for Razorpay Checkout while RAZORPAY_MODE is mock. Not reachable in live mode. */
 export default async function MockPayPage({ searchParams }: { searchParams: Promise<{ order?: string | string[] }> }) {
+  const { order: param } = await searchParams // reading it first keeps the page dynamic, never prerendered
   if (getRazorpay().mode === 'live') notFound()
-  const { order: param } = await searchParams
   const razorpayOrderId = typeof param === 'string' ? param : ''
   if (!razorpayOrderId) notFound()
 

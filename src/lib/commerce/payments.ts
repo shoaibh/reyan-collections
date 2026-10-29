@@ -50,6 +50,11 @@ export async function markPaid(
       payload.update({ collection: 'orders', id: orderId, depth: 0, req: tx.req, data })
 
     if (order.paymentStatus === 'paid' || order.paymentStatus === 'refunded') {
+      if (order.razorpay?.paymentId && order.razorpay.paymentId !== input.paymentId) {
+        payload.logger.warn(
+          `Order ${order.orderNumber} is already ${order.paymentStatus} with payment ${order.razorpay.paymentId}; received another payment ${input.paymentId}. Check for a double charge.`,
+        )
+      }
       return { outcome: 'already_paid' as const, order, stockChanged: false }
     }
 
@@ -114,6 +119,7 @@ export async function recordPaymentFailure(
     await lockOrder(tx.db, orderId)
     const order = await payload.findByID({ collection: 'orders', id: orderId, depth: 0, req: tx.req })
     if (order.status !== 'pending_payment') return
+    payload.logger.info(`Payment failed for order ${order.orderNumber}: ${input.reason}`)
     if ((order.timeline ?? []).some((t) => t.note === note)) return
     await payload.update({
       collection: 'orders',
