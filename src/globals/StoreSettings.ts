@@ -106,7 +106,15 @@ export const StoreSettings: GlobalConfig = {
     {
       name: 'invoicing',
       type: 'group',
-      fields: [{ name: 'invoicePrefix', type: 'text', defaultValue: 'RC' }],
+      fields: [
+        {
+          name: 'invoicePrefix',
+          type: 'text',
+          defaultValue: 'RC',
+          validate: (value: string | null | undefined) =>
+            typeof value === 'string' && /^[A-Z0-9]{1,3}$/.test(value) ? true : 'Use 1–3 capital letters or digits',
+        },
+      ],
     },
   ],
 }
