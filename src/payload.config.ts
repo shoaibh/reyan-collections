@@ -22,6 +22,7 @@ import { Navigation } from './globals/Navigation'
 import { LinksPage } from './globals/LinksPage'
 import { StoreSettings } from './globals/StoreSettings'
 import { storagePlugins } from './lib/storage'
+import { jobsAutoRun, jobTasks, runJobsNowEndpoint } from './jobs'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -55,6 +56,8 @@ export default buildConfig({
       connectionString: process.env.DATABASE_URI || '',
     },
   }),
+  endpoints: [runJobsNowEndpoint],
+  jobs: { tasks: jobTasks, autoRun: jobsAutoRun },
   sharp,
   upload: { limits: { fileSize: 15_000_000 }, abortOnLimit: true },
   plugins: [...storagePlugins()],
