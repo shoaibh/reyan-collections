@@ -123,14 +123,30 @@ test('owner publishes a new product and shoppers see it', async ({ page, request
   await expect(card).toBeVisible()
   await expect(card).toContainText('₹349')
 
-  // Back in the admin, sell out the only variant
-  await page.goto('/admin/collections/products')
-  await page.getByText(TITLE).first().click()
-  const stock = page.locator('input[name="variants.0.stock"]')
-  await expect(stock).toHaveValue('2')
-  await stock.fill('0')
-  await page.getByRole('button', { name: 'Publish changes' }).click()
-  await expect(page.getByText('Updated successfully.').first()).toBeVisible()
+  // A shopper buys both units with cash on delivery
+  await page.goto(`/p/${SLUG}`)
+  await expect(page.getByRole('heading', { level: 1, name: TITLE })).toBeVisible()
+  const stepper = page.getByRole('group', { name: 'Quantity' })
+  await expect(async () => {
+    await stepper.getByRole('button', { name: 'Increase quantity' }).click()
+    await expect(stepper.locator('output')).toHaveText('2', { timeout: 1000 })
+  }).toPass()
+  const cartDrawer = page.getByRole('dialog', { name: 'Cart' })
+  await expect(async () => {
+    await page.getByRole('button', { name: 'Add to cart' }).click()
+    await expect(cartDrawer).toBeVisible({ timeout: 1000 })
+  }).toPass()
+  await cartDrawer.getByRole('link', { name: 'Checkout' }).click()
+  await expect(page).toHaveURL(/\/checkout$/)
+  await page.getByLabel('Full name').fill('Neha Gupta')
+  await page.getByLabel('Mobile number').fill('98765 00004')
+  await page.getByLabel('Address line 1').fill('9 Hill Road')
+  await page.getByLabel('Pincode').fill('226001')
+  await expect(page.getByLabel('City')).toHaveValue('Lucknow')
+  await expect(page.getByLabel('State')).toHaveValue('Uttar Pradesh')
+  await page.getByRole('radio', { name: 'Cash on delivery' }).check()
+  await page.getByRole('button', { name: 'Place order' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Order received' })).toBeVisible()
 
   // Final: the product page shows it sold out without any redeploy
   await page.goto(`/p/${SLUG}`)
