@@ -37,6 +37,7 @@ export type Booking = {
   courierName: string
   labelUrl: string | null
   trackingUrl: string
+  warnings: string[]
 }
 
 export type TrackResult = { status: string; at: string } | null

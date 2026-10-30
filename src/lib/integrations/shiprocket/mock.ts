@@ -42,6 +42,7 @@ export const mockShiprocket: ShiprocketClient = {
       courierName: 'Mock Express',
       labelUrl: `/dev/mock-label?awb=${awb}`,
       trackingUrl: `https://shiprocket.co/tracking/${awb}`,
+      warnings: [],
     }
   },
   async cancelShipment(): Promise<void> {},

@@ -43,13 +43,20 @@ describe('shiprocket mock', () => {
     expect(b.courierName).toBe('Mock Express')
     expect(b.labelUrl).toBe(`/dev/mock-label?awb=${b.awb}`)
     expect(b.trackingUrl).toBe(`https://shiprocket.co/tracking/${b.awb}`)
+    expect(b.warnings).toEqual([])
     await expect(mockShiprocket.cancelShipment(b.shiprocketOrderId)).resolves.toBeUndefined()
     expect(await mockShiprocket.trackAwb(b.awb)).toBeNull()
   })
 
-  it('getShiprocket returns the live client in live mode', () => {
+  it('getShiprocket returns the live client in live mode', async () => {
     vi.stubEnv('SHIPROCKET_MODE', 'live')
-    expect(getShiprocket()).not.toBe(mockShiprocket)
+    const fetchMock = vi.fn(async (url: string) =>
+      String(url).endsWith('/auth/login') ? json({ token: 't' }) : json({ tracking_data: { shipment_track: [] } }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    expect(await getShiprocket().trackAwb('A1')).toBeNull()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(String(fetchMock.mock.calls[1][0])).toContain('/courier/track/awb/A1')
   })
 })
 
@@ -111,6 +118,7 @@ describe('shiprocket live', () => {
       courierName: 'Delhivery',
       labelUrl: 'https://label/1.pdf',
       trackingUrl: 'https://shiprocket.co/tracking/AWB123',
+      warnings: [],
     })
     const paths = calls.map((c) => c.url.replace('https://apiv2.shiprocket.in/v1/external', ''))
     expect(paths).toEqual(['/auth/login', '/orders/create/adhoc', '/courier/assign/awb', '/courier/generate/pickup', '/courier/generate/label'])
@@ -205,5 +213,53 @@ describe('shiprocket live', () => {
     vi.stubEnv('SHIPROCKET_EMAIL', '')
     vi.stubGlobal('fetch', vi.fn())
     await expect(createLiveShiprocket().trackAwb('A1')).rejects.toThrow('SHIPROCKET_EMAIL')
+  })
+})
+
+function bookingFetch(fail: string | null, calls: string[] = []) {
+  return vi.fn(async (url: string) => {
+    const path = url.replace('https://apiv2.shiprocket.in/v1/external', '')
+    calls.push(path)
+    if (path === fail) return json({}, 500)
+    if (path === '/auth/login') return json({ token: 't' })
+    if (path === '/orders/create/adhoc') return json({ order_id: 555, shipment_id: 777 })
+    if (path === '/courier/assign/awb') return json({ response: { data: { awb_code: 'AWB123', courier_name: 'Delhivery' } } })
+    if (path === '/courier/generate/pickup') return json({ pickup_status: 1 })
+    return json({ label_url: 'https://label/1.pdf' })
+  })
+}
+
+describe('shiprocket live booking failures', () => {
+  it('keeps the booking when pickup fails', async () => {
+    vi.stubGlobal('fetch', bookingFetch('/courier/generate/pickup'))
+    const b = await createLiveShiprocket().bookShipment(shipment)
+    expect(b.awb).toBe('AWB123')
+    expect(b.labelUrl).toBe('https://label/1.pdf')
+    expect(b.warnings).toEqual(['Pickup request failed. Schedule the pickup in Shiprocket.'])
+  })
+
+  it('keeps the booking when the label fails', async () => {
+    vi.stubGlobal('fetch', bookingFetch('/courier/generate/label'))
+    const b = await createLiveShiprocket().bookShipment(shipment)
+    expect(b.awb).toBe('AWB123')
+    expect(b.labelUrl).toBeNull()
+    expect(b.warnings).toEqual(['Label not generated yet. Download it from Shiprocket.'])
+  })
+
+  it('cancels the created order and rejects when AWB assignment fails', async () => {
+    const calls: string[] = []
+    const fetchMock = bookingFetch('/courier/assign/awb', calls)
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(createLiveShiprocket().bookShipment(shipment)).rejects.toThrow(
+      'Shiprocket could not assign a courier: 500',
+    )
+    expect(calls).toContain('/orders/cancel')
+    const cancel = fetchMock.mock.calls.find(([u]) => String(u).endsWith('/orders/cancel')) as unknown as [string, RequestInit]
+    expect(JSON.parse(String(cancel[1].body))).toEqual({ ids: [555] })
+  })
+
+  it('rejects when login fails', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json({}, 403)))
+    await expect(createLiveShiprocket().trackAwb('A1')).rejects.toThrow('403')
   })
 })

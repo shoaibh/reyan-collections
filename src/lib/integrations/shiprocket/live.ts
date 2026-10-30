@@ -135,24 +135,52 @@ export function createLiveShiprocket(): ShiprocketClient {
         },
       )
       const shipmentId = Number(created.shipment_id)
-      const assigned = await request<{ response?: { data?: { awb_code?: string; courier_name?: string } } }>(
-        'POST',
-        '/courier/assign/awb',
-        { shipment_id: shipmentId },
-      )
-      const awb = assigned.response?.data?.awb_code
-      if (!awb) throw new Error('Shiprocket did not assign an AWB')
-      await request('POST', '/courier/generate/pickup', { shipment_id: [shipmentId] })
-      const label = await request<{ label_url?: string }>('POST', '/courier/generate/label', {
-        shipment_id: [shipmentId],
-      })
+      let awb: string | undefined
+      let courierName = ''
+      try {
+        const assigned = await request<{ response?: { data?: { awb_code?: string; courier_name?: string } } }>(
+          'POST',
+          '/courier/assign/awb',
+          { shipment_id: shipmentId },
+        )
+        awb = assigned.response?.data?.awb_code
+        courierName = assigned.response?.data?.courier_name ?? ''
+        if (!awb) throw new Error('no awb_code in response')
+      } catch (err) {
+        try {
+          await request('POST', '/orders/cancel', { ids: [Number(created.order_id)] })
+        } catch {
+          // best effort: the original failure is what matters
+        }
+        const status = /status (\d+)/.exec(err instanceof Error ? err.message : '')?.[1]
+        throw new Error('Shiprocket could not assign a courier: ' + (status ?? 'no AWB returned'))
+      }
+
+      // The AWB is assigned, so the booking is committed: later failures become warnings.
+      const warnings: string[] = []
+      try {
+        await request('POST', '/courier/generate/pickup', { shipment_id: [shipmentId] })
+      } catch {
+        warnings.push('Pickup request failed. Schedule the pickup in Shiprocket.')
+      }
+      let labelUrl: string | null = null
+      try {
+        const label = await request<{ label_url?: string }>('POST', '/courier/generate/label', {
+          shipment_id: [shipmentId],
+        })
+        labelUrl = label.label_url ?? null
+      } catch {
+        // handled below
+      }
+      if (!labelUrl) warnings.push('Label not generated yet. Download it from Shiprocket.')
       return {
         shiprocketOrderId: String(created.order_id),
         shipmentId: String(created.shipment_id),
         awb,
-        courierName: assigned.response?.data?.courier_name ?? '',
-        labelUrl: label.label_url ?? null,
+        courierName,
+        labelUrl,
         trackingUrl: `https://shiprocket.co/tracking/${awb}`,
+        warnings,
       }
     },
 
