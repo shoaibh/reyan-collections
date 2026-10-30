@@ -16,6 +16,7 @@ import { DiscountCodes } from './collections/DiscountCodes'
 import { CodBlocklist } from './collections/CodBlocklist'
 import { RateLimits } from './collections/RateLimits'
 import { Counters } from './collections/Counters'
+import { DevEmails } from './collections/DevEmails'
 import { Homepage } from './globals/Homepage'
 import { Navigation } from './globals/Navigation'
 import { LinksPage } from './globals/LinksPage'
@@ -42,7 +43,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Categories, Curated, Products, Pages, Orders, DiscountCodes, CodBlocklist, RateLimits, Counters],
+  collections: [Users, Media, Categories, Curated, Products, Pages, Orders, DiscountCodes, CodBlocklist, RateLimits, Counters, DevEmails],
   globals: [Homepage, Navigation, LinksPage, StoreSettings],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',

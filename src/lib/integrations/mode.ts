@@ -1,4 +1,4 @@
-export type IntegrationName = 'RAZORPAY' | 'TURNSTILE' | 'SHIPROCKET'
+export type IntegrationName = 'RAZORPAY' | 'TURNSTILE' | 'SHIPROCKET' | 'EMAIL'
 
 /**
  * Whether an integration runs against the real service or the mock. Fails closed: the mocks use

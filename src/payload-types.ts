@@ -78,6 +78,7 @@ export interface Config {
     'cod-blocklist': CodBlocklist;
     'rate-limits': RateLimit;
     counters: Counter;
+    'dev-emails': DevEmail;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -96,6 +97,7 @@ export interface Config {
     'cod-blocklist': CodBlocklistSelect<false> | CodBlocklistSelect<true>;
     'rate-limits': RateLimitsSelect<false> | RateLimitsSelect<true>;
     counters: CountersSelect<false> | CountersSelect<true>;
+    'dev-emails': DevEmailsSelect<false> | DevEmailsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -546,6 +548,20 @@ export interface Counter {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "dev-emails".
+ */
+export interface DevEmail {
+  id: number;
+  to: string;
+  subject: string;
+  html: string;
+  tag?: string | null;
+  orderNumber?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -611,6 +627,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'counters';
         value: number | Counter;
+      } | null)
+    | ({
+        relationTo: 'dev-emails';
+        value: number | DevEmail;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -1031,6 +1051,19 @@ export interface RateLimitsSelect<T extends boolean = true> {
 export interface CountersSelect<T extends boolean = true> {
   key?: T;
   lastNumber?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "dev-emails_select".
+ */
+export interface DevEmailsSelect<T extends boolean = true> {
+  to?: T;
+  subject?: T;
+  html?: T;
+  tag?: T;
+  orderNumber?: T;
   updatedAt?: T;
   createdAt?: T;
 }

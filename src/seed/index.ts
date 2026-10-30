@@ -28,6 +28,7 @@ export async function wipe(payload: Payload) {
     'cod-blocklist',
     'rate-limits',
     'counters',
+    'dev-emails',
     'curated', 'products',
     'categories',
     'pages',
