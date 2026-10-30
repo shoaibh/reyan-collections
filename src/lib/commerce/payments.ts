@@ -6,7 +6,7 @@ import { notify } from '@/lib/notifications/notify'
 import { revalidate } from '@/lib/revalidate'
 
 import { withTransaction } from './db'
-import { lockOrder, productTags, withTimelineEntry } from './orderOps'
+import { lockOrder, productTags, withTimelineEntry } from './orderShared'
 import { assertTransition } from './orderStateMachine'
 import { orderUrl } from './paymentLaunch'
 import { reserveStock, type StockItem } from './stock'
@@ -89,6 +89,10 @@ export async function markPaid(
       // Refund inside the lock on purpose: concurrent verify and webhook calls can't double-refund. If the commit
       // fails after Razorpay refunds, a retry could refund again (accepted at this volume).
       const refund = await getRazorpay().refund(input.paymentId, (order.total ?? 0) * 100)
+      payload.logger.info(
+        { orderNumber: order.orderNumber, refundId: refund.id, amountPaise: (order.total ?? 0) * 100 },
+        'Refund issued',
+      )
       const updated = await update({
         paymentStatus: 'refunded',
         razorpay: { ...razorpay, refundId: refund.id },

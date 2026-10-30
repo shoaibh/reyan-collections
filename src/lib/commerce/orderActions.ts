@@ -8,8 +8,8 @@ import type { Order } from '@/payload-types'
 import { revalidate } from '@/lib/revalidate'
 
 import { withTransaction, type Tx } from './db'
-import { lockOrder, productTags, stockItemsOf, withTimelineEntry } from './orderOps'
-import { canTransition, statusLabel, type OrderStatus } from './orderStateMachine'
+import { lockOrder, productTags, stockItemsOf, withTimelineEntry } from './orderShared'
+import { assertTransition, canTransition, statusLabel, type OrderStatus } from './orderStateMachine'
 import { releaseStock } from './stock'
 
 export type ActionResult =
@@ -84,12 +84,17 @@ async function runAction(
 }
 
 /** Refunds a paid prepaid order in full while the order lock is held. */
-async function refundInLock(order: Order): Promise<{ refundId: string; amount: number }> {
+async function refundInLock(payload: Payload, order: Order): Promise<{ refundId: string; amount: number }> {
   const paymentId = order.razorpay?.paymentId
   if (!paymentId) throw new ActionFailure(502, "We couldn't process the refund. Please try again.")
   const amount = order.total ?? 0
   try {
     const refund = await getRazorpay().refund(paymentId, amount * 100)
+    // Logged at once: if the commit fails after this, the refund can still be reconciled from the logs.
+    payload.logger.info(
+      { orderNumber: order.orderNumber, refundId: refund.id, amountPaise: amount * 100 },
+      'Refund issued',
+    )
     return { refundId: refund.id, amount }
   } catch {
     throw new ActionFailure(502, "We couldn't process the refund. Please try again.")
@@ -104,6 +109,7 @@ export function confirmOrder(payload: Payload, orderId: number): Promise<ActionR
     const status = order.status as OrderStatus
     if (AFTER_CONFIRMED.includes(status)) return { order, changed: false }
     if (status !== 'awaiting_confirmation') throw blocked('confirmed', status)
+    assertTransition(status, 'confirmed')
     const updated = await update(tx, payload, orderId, {
       status: 'confirmed',
       timeline: withTimelineEntry(order, { status: 'confirmed', by: 'admin', note: 'Confirmed on WhatsApp' }),
@@ -119,7 +125,7 @@ export function confirmOrder(payload: Payload, orderId: number): Promise<ActionR
 export function cancelOrder(
   payload: Payload,
   orderId: number,
-  opts: { by: By; note: string; allowFrom?: OrderStatus[] },
+  opts: { by: By; note: string; allowFrom?: OrderStatus[]; notify?: boolean },
 ): Promise<ActionResult> {
   const allowFrom = opts.allowFrom ?? ['pending_payment', 'awaiting_confirmation', 'confirmed', 'ready_to_ship']
   return runAction(payload, orderId, async (tx, order) => {
@@ -145,7 +151,7 @@ export function cancelOrder(
     }
     let refundAmount: number | undefined
     if (isPaidPrepaid(order)) {
-      const refund = await refundInLock(order)
+      const refund = await refundInLock(payload, order)
       refundAmount = refund.amount
       data.paymentStatus = 'refunded'
       data.razorpay = { ...order.razorpay, refundId: refund.refundId }
@@ -155,7 +161,10 @@ export function cancelOrder(
       order: updated,
       changed: true,
       stockChanged: true,
-      notifications: [{ event: 'cancelled', extra: refundAmount === undefined ? undefined : { refundAmount } }],
+      notifications:
+        opts.notify === false
+          ? []
+          : [{ event: 'cancelled', extra: refundAmount === undefined ? undefined : { refundAmount } }],
     }
   })
 }
@@ -183,7 +192,7 @@ export function markDelivered(
 export function markReturned(
   payload: Payload,
   orderId: number,
-  opts: { restock: boolean; refundNote?: string },
+  opts: { restock: boolean; refundNote?: string; by?: By },
 ): Promise<ActionResult> {
   return runAction(payload, orderId, async (tx, order) => {
     const status = order.status as OrderStatus
@@ -193,22 +202,22 @@ export function markReturned(
     const cod = order.paymentMethod === 'cod'
     if (cod && !refundNote) throw new ActionFailure(400, 'Add a note about the cash refund')
 
-    const data: Partial<Order> = {
-      status: 'returned',
-      timeline: withTimelineEntry(order, {
-        status: 'returned',
-        by: 'admin',
-        note: opts.restock ? 'Returned; stock restored' : 'Returned',
-      }),
-    }
+    const data: Partial<Order> = { status: 'returned' }
     const notifications: Outcome['notifications'] = []
+    let restocked = false
     if (opts.restock && !order.restocked) {
       await releaseStock(tx.db, stockItemsOf(order))
       data.restocked = true
+      restocked = true
     }
+    data.timeline = withTimelineEntry(order, {
+      status: 'returned',
+      by: opts.by ?? 'admin',
+      note: restocked ? 'Returned; stock restored' : 'Returned',
+    })
     if (cod) data.refundNote = refundNote
     if (isPaidPrepaid(order)) {
-      const refund = await refundInLock(order)
+      const refund = await refundInLock(payload, order)
       data.paymentStatus = 'refunded'
       data.razorpay = { ...order.razorpay, refundId: refund.refundId }
       notifications.push({ event: 'refunded', extra: { refundAmount: refund.amount } })
@@ -252,4 +261,25 @@ export function handleAlert(
         : { creditNote: { ...order.creditNote, handled: true } }
     return { order: await update(tx, payload, orderId, data), changed: true }
   })
+}
+
+/**
+ * Cancels an order that has not been confirmed yet, putting its stock back. Returns the cancelled
+ * order, or null when it is no longer pending (already paid, confirmed, or cancelled). Pass
+ * `notify: false` when the customer is already looking at the failure (for example a payment that
+ * could not start).
+ */
+export async function cancelPendingOrder(
+  payload: Payload,
+  orderId: number,
+  note: string,
+  opts?: { notify?: boolean },
+): Promise<Order | null> {
+  const result = await cancelOrder(payload, orderId, {
+    by: 'system',
+    note,
+    allowFrom: ['pending_payment', 'awaiting_confirmation'],
+    notify: opts?.notify,
+  })
+  return result.ok && result.changed ? result.order : null
 }

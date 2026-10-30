@@ -255,7 +255,7 @@ export async function placeOrder(
     } catch (err) {
       payload.logger.error({ err, orderNumber: order.orderNumber }, 'Could not start the payment')
       try {
-        await cancelPendingOrder(payload, order.id, 'Payment could not be started')
+        await cancelPendingOrder(payload, order.id, 'Payment could not be started', { notify: false })
       } catch (cancelErr) {
         payload.logger.error(
           { err: cancelErr, orderNumber: order.orderNumber },

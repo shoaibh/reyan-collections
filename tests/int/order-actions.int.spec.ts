@@ -16,7 +16,9 @@ import {
 } from '@/lib/commerce/orderActions'
 import { markPaid } from '@/lib/commerce/payments'
 import { computeCheckout } from '@/lib/commerce/quote'
+import { cancelPendingOrder } from '@/lib/commerce/orderOps'
 import { mockRazorpay } from '@/lib/integrations/razorpay/mock'
+import { mockShiprocket } from '@/lib/integrations/shiprocket/mock'
 import { MOCK_TURNSTILE_TOKEN } from '@/lib/integrations/turnstile'
 import { seed, wipe } from '@/seed'
 
@@ -36,7 +38,7 @@ const stockOf = async (line: Line) => {
   return Number(r.rows[0]!.stock)
 }
 
-async function place(paymentMethod: 'cod' | 'prepaid', email = '') {
+async function place(paymentMethod: 'cod' | 'prepaid', email = '', expectedStatus = 201) {
   seq++
   const phone = nextPhone()
   const items = [{ ...sand, qty: 1 }]
@@ -65,10 +67,9 @@ async function place(paymentMethod: 'cod' | 'prepaid', email = '') {
       }),
     }),
   )
-  expect(res.status).toBe(201)
-  const json = (await res.json()) as { orderNumber: string }
+  expect(res.status).toBe(expectedStatus)
   return (
-    await payload.find({ collection: 'orders', where: { orderNumber: { equals: json.orderNumber } }, limit: 1, depth: 0 })
+    await payload.find({ collection: 'orders', where: { 'customer.phone': { equals: phone } }, limit: 1, depth: 0 })
   ).docs[0]!
 }
 
@@ -78,6 +79,10 @@ async function placePaid(email = '') {
   return (await reload(order.id))
 }
 
+const setStock = async (line: Line, stock: number) => {
+  const db = await drizzleFor(payload)
+  await db.execute(sql`UPDATE products_variants SET stock = ${stock} WHERE id = ${line.variantId}`)
+}
 const reload = (id: number) => payload.findByID({ collection: 'orders', id, depth: 0 })
 const setStatus = (id: number, status: string) =>
   payload.update({ collection: 'orders', id, depth: 0, data: { status } as never })
@@ -239,5 +244,76 @@ describe('order actions', () => {
     const paid = await placePaid('paid@example.com')
     const paidTags = (await emails(paid.orderNumber)).docs.map((e) => e.tag).sort()
     expect(paidTags).toEqual(['admin_new_order', 'order_paid'])
+  })
+
+  const placeBooked = async () => {
+    const order = await placePaid()
+    await payload.update({
+      collection: 'orders',
+      id: order.id,
+      depth: 0,
+      data: { shipment: { shiprocketOrderId: `sr_${seq}` } } as never,
+    })
+    return order
+  }
+
+  it('cancels a booked prepaid order: one courier cancel, one refund', async () => {
+    const order = await placeBooked()
+    const cancel = vi.spyOn(mockShiprocket, 'cancelShipment')
+    const refund = vi.spyOn(mockRazorpay, 'refund')
+    const res = await cancelOrder(payload, order.id, { by: 'admin', note: 'Cancelled by admin' })
+    expect(res).toMatchObject({ ok: true, changed: true })
+    expect(cancel).toHaveBeenCalledTimes(1)
+    expect(refund).toHaveBeenCalledTimes(1)
+    expect((await reload(order.id)).status).toBe('cancelled')
+  })
+
+  it('leaves the order untouched when the courier cancel fails', async () => {
+    const order = await placeBooked()
+    const before = await stockOf(sand)
+    vi.spyOn(mockShiprocket, 'cancelShipment').mockRejectedValueOnce(new Error('down'))
+    const refund = vi.spyOn(mockRazorpay, 'refund')
+    const res = await cancelOrder(payload, order.id, { by: 'admin', note: 'x' })
+    expect(res).toEqual({ ok: false, status: 502, error: "We couldn't cancel the courier booking. Please try again." })
+    expect(refund).not.toHaveBeenCalled()
+    expect((await reload(order.id)).status).toBe('confirmed')
+    expect(await stockOf(sand)).toBe(before)
+  })
+
+  it('leaves the order untouched when the refund fails', async () => {
+    const order = await placePaid()
+    const before = await stockOf(sand)
+    vi.spyOn(mockRazorpay, 'refund').mockRejectedValueOnce(new Error('down'))
+    const res = await cancelOrder(payload, order.id, { by: 'admin', note: 'x' })
+    expect(res).toEqual({ ok: false, status: 502, error: "We couldn't process the refund. Please try again." })
+    expect(await reload(order.id)).toMatchObject({ status: 'confirmed', paymentStatus: 'paid' })
+    expect(await stockOf(sand)).toBe(before)
+  })
+
+  it('refuses a cancel from a status outside allowFrom', async () => {
+    const order = await place('cod')
+    const res = await cancelOrder(payload, order.id, { by: 'system', note: 'x', allowFrom: ['pending_payment'] })
+    expect(res).toEqual({ ok: false, status: 409, error: "This order can't be cancelled from Awaiting confirmation." })
+    expect((await reload(order.id)).status).toBe('awaiting_confirmation')
+  })
+
+  it('treats cancelling an already refunded late-payment order as done, with no second refund', async () => {
+    const order = await place('prepaid')
+    await cancelPendingOrder(payload, order.id, 'expired')
+    await setStock(sand, 0)
+    const late = await markPaid(payload, { razorpayOrderId: order.razorpay!.orderId as string, paymentId: 'pay_late_act' })
+    expect(late.outcome).toBe('late_refunded')
+    const refund = vi.spyOn(mockRazorpay, 'refund')
+    const res = await cancelOrder(payload, order.id, { by: 'admin', note: 'x' })
+    expect(res).toMatchObject({ ok: true, changed: false })
+    expect(refund).not.toHaveBeenCalled()
+  })
+
+  it('does not email the customer when the payment could not be started', async () => {
+    vi.spyOn(mockRazorpay, 'createOrder').mockRejectedValueOnce(new Error('down'))
+    const order = await place('prepaid', 'quiet@example.com', 502)
+    expect((await reload(order.id)).status).toBe('cancelled')
+    const tags = (await emails(order.orderNumber)).docs.map((e) => e.tag)
+    expect(tags).not.toContain('cancelled')
   })
 })
