@@ -79,10 +79,7 @@ test('Instagram shopper pays online with a discount code', async ({ page, reques
     }).toPass()
     await expect(page.getByText('Only 1 left')).toBeVisible()
   } finally {
-    // The order consumed 2 Sand, and storefront.e2e asserts "Only 3 left". The product hook keeps the
-    // live stock when a save equals the stock the latest version loaded (3), so a single write of 3
-    // is ignored: go through 2 first, then 3.
-    await setVariantStock(request, 'mexico-premium-container-set-of-2', 'Sand', 2)
+    // The order consumed 2 Sand, and storefront.e2e asserts "Only 3 left"
     await setVariantStock(request, 'mexico-premium-container-set-of-2', 'Sand', 3)
   }
 })

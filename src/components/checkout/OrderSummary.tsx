@@ -24,11 +24,13 @@ export function OrderSummary({
   loading,
   failed,
   onEditCart,
+  onRetry,
 }: {
   quote: Quote | null
   loading: boolean
   failed: boolean
   onEditCart: () => void
+  onRetry: () => void
 }) {
   const t = quote?.totals
   return (
@@ -58,9 +60,16 @@ export function OrderSummary({
       ) : null}
 
       {failed ? (
-        <p role="alert" className="mt-3 text-[15px] font-bold text-[#b3261e]">
-          We couldn&apos;t update your total. Please check your connection and try again.
-        </p>
+        <div role="alert" className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[15px] font-bold text-[#b3261e]">We couldn&apos;t update your total.</p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="rounded-xl border-[2.5px] border-ink bg-ink px-3.5 py-1.5 text-[15px] font-bold text-butter"
+          >
+            Try again
+          </button>
+        </div>
       ) : null}
 
       {quote ? (

@@ -1,12 +1,18 @@
 'use client'
 
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useImperativeHandle, useRef } from 'react'
 
 type TurnstileApi = {
   render: (
     el: HTMLElement,
-    options: { sitekey: string; callback: (token: string) => void; 'expired-callback': () => void },
+    options: {
+      sitekey: string
+      callback: (token: string) => void
+      'expired-callback': () => void
+      'error-callback': () => void
+    },
   ) => string
+  reset: (widgetId: string) => void
   remove: (widgetId: string) => void
 }
 declare global {
@@ -35,30 +41,53 @@ function loadScript(): Promise<void> {
   return scriptPromise
 }
 
-/** The Cloudflare widget, live mode only. Mock mode never mounts this. */
-export function TurnstileField({ siteKey, onToken }: { siteKey: string; onToken: (token: string) => void }) {
+export type TurnstileHandle = { reset: () => void }
+
+/**
+ * The Cloudflare widget, live mode only. Mock mode never mounts this. A token is single-use, so the
+ * parent calls `ref.current.reset()` after any failed submit to get a fresh one.
+ */
+export function TurnstileField({
+  siteKey,
+  onToken,
+  onError,
+  ref,
+}: {
+  siteKey: string
+  onToken: (token: string) => void
+  onError: () => void
+  ref: React.Ref<TurnstileHandle>
+}) {
   const box = useRef<HTMLDivElement>(null)
-  const callback = useRef(onToken)
+  const widget = useRef<string | undefined>(undefined)
+  const callbacks = useRef({ onToken, onError })
   useEffect(() => {
-    callback.current = onToken
+    callbacks.current = { onToken, onError }
   })
 
+  useImperativeHandle(ref, () => ({
+    reset: () => {
+      if (widget.current !== undefined) window.turnstile?.reset(widget.current)
+    },
+  }))
+
   useEffect(() => {
-    let widgetId: string | undefined
     let cancelled = false
     loadScript()
       .then(() => {
         if (cancelled || !box.current || !window.turnstile) return
-        widgetId = window.turnstile.render(box.current, {
+        widget.current = window.turnstile.render(box.current, {
           sitekey: siteKey,
-          callback: (token) => callback.current(token),
-          'expired-callback': () => callback.current(''),
+          callback: (token) => callbacks.current.onToken(token),
+          'expired-callback': () => callbacks.current.onToken(''),
+          'error-callback': () => callbacks.current.onError(),
         })
       })
-      .catch(() => callback.current(''))
+      .catch(() => callbacks.current.onError())
     return () => {
       cancelled = true
-      if (widgetId !== undefined) window.turnstile?.remove(widgetId)
+      if (widget.current !== undefined) window.turnstile?.remove(widget.current)
+      widget.current = undefined
     }
   }, [siteKey])
 

@@ -8,7 +8,7 @@ import { useCart } from '@/components/cart/CartProvider'
 import { launchPayment } from '@/components/checkout/launchPayment'
 import { OrderSummary } from '@/components/checkout/OrderSummary'
 import { errorClass, inputClass, labelClass, TextField } from '@/components/checkout/TextField'
-import { TurnstileField } from '@/components/checkout/TurnstileField'
+import { TurnstileField, type TurnstileHandle } from '@/components/checkout/TurnstileField'
 import { fieldErrors, type CheckoutField, type CheckoutFields } from '@/lib/commerce/checkoutInput'
 import type { PaymentLaunch } from '@/lib/commerce/paymentLaunch'
 import type { PaymentMethod } from '@/lib/commerce/pricing'
@@ -86,7 +86,9 @@ export function CheckoutForm({ turnstile, prepaidDiscount }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [redirecting, setRedirecting] = useState(false)
   const [idempotencyKey, setIdempotencyKey] = useState(newKey)
+  const [securityError, setSecurityError] = useState(false)
   const submitGuard = useRef(false)
+  const turnstileRef = useRef<TurnstileHandle>(null)
 
   const set = (key: CheckoutField) => (value: string) => {
     setFields((f) => ({ ...f, [key]: value }))
@@ -201,8 +203,12 @@ export function CheckoutForm({ turnstile, prepaidDiscount }: Props) {
       const data = (await res.json().catch(() => ({}))) as OrderResponse
 
       if (!res.ok || !data.orderUrl) {
-        // A failed attempt must never be replayed under the same key
+        // A failed attempt must never be replayed under the same key, and a Turnstile token is single-use
         setIdempotencyKey(newKey())
+        if (turnstile.mode === 'live') {
+          setToken('')
+          turnstileRef.current?.reset()
+        }
         const field = FIELD_ORDER.find((k) => k === data.field)
         if (field && data.error) {
           setErrors({ [field]: data.error })
@@ -437,7 +443,13 @@ export function CheckoutForm({ turnstile, prepaidDiscount }: Props) {
         </div>
       </fieldset>
 
-      <OrderSummary quote={quote} loading={loading} failed={failed} onEditCart={() => cart.setOpen(true)} />
+      <OrderSummary
+        quote={quote}
+        loading={loading}
+        failed={failed}
+        onEditCart={() => cart.setOpen(true)}
+        onRetry={() => setRefresh((n) => n + 1)}
+      />
 
       {/* Honeypot: people never see or reach it, bots fill it */}
       <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
@@ -452,7 +464,23 @@ export function CheckoutForm({ turnstile, prepaidDiscount }: Props) {
       </div>
 
       {turnstile.mode === 'live' && turnstile.siteKey ? (
-        <TurnstileField siteKey={turnstile.siteKey} onToken={setToken} />
+        <TurnstileField
+          ref={turnstileRef}
+          siteKey={turnstile.siteKey}
+          onToken={(t) => {
+            setToken(t)
+            if (t) setSecurityError(false)
+          }}
+          onError={() => {
+            setToken('')
+            setSecurityError(true)
+          }}
+        />
+      ) : null}
+      {securityError ? (
+        <p role="alert" className="text-[15px] font-bold text-[#b3261e]">
+          We couldn&apos;t load the security check. Please refresh the page.
+        </p>
       ) : null}
 
       {formError ? (
