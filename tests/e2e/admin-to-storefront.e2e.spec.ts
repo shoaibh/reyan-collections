@@ -3,6 +3,8 @@ import path from 'node:path'
 
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
 
+import { addToCart, raiseQuantity } from './helpers/checkout'
+
 const SLUG = 'wooden-stacking-rings'
 const TITLE = 'Wooden stacking rings'
 const ALT = 'Stacking rings'
@@ -126,17 +128,9 @@ test('owner publishes a new product and shoppers see it', async ({ page, request
   // A shopper buys both units with cash on delivery
   await page.goto(`/p/${SLUG}`)
   await expect(page.getByRole('heading', { level: 1, name: TITLE })).toBeVisible()
-  const stepper = page.getByRole('group', { name: 'Quantity' })
-  await expect(async () => {
-    await stepper.getByRole('button', { name: 'Increase quantity' }).click()
-    await expect(stepper.locator('output')).toHaveText('2', { timeout: 1000 })
-  }).toPass()
-  const cartDrawer = page.getByRole('dialog', { name: 'Cart' })
-  await expect(async () => {
-    await page.getByRole('button', { name: 'Add to cart' }).click()
-    await expect(cartDrawer).toBeVisible({ timeout: 1000 })
-  }).toPass()
-  await cartDrawer.getByRole('link', { name: 'Checkout' }).click()
+  await raiseQuantity(page, 2)
+  await addToCart(page)
+  await page.getByRole('dialog', { name: 'Cart' }).getByRole('link', { name: 'Checkout' }).click()
   await expect(page).toHaveURL(/\/checkout$/)
   await page.getByLabel('Full name').fill('Neha Gupta')
   await page.getByLabel('Mobile number').fill('98765 00004')
