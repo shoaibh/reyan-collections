@@ -63,11 +63,11 @@ export function ProductBuyBox({
         {header}
         <VariantPicker variants={variants} selectedId={selected.id} onSelect={setSelectedId} />
         <StockState stock={available} />
-        {!outOfStock && <QtyStepper value={qty} max={max} onChange={setWanted} />}
+        {!outOfStock && <QtyStepper value={qty} max={max} onChange={setWanted} disabled={!cart.loaded} />}
         <div className="flex flex-col gap-3">
           <button
             type="button"
-            disabled={outOfStock}
+            disabled={outOfStock || !cart.loaded}
             onClick={() => {
               cart.add({ productId, variantId: selected.id, qty })
               cart.setOpen(true)

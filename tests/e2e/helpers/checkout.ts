@@ -1,23 +1,9 @@
 import { expect, type Page } from '@playwright/test'
 
-/**
- * Clicks "Add to cart" until the cart drawer opens. A click before hydration is lost, so it is
- * retried; the header badge guards every retry, so a slow render can never add the line twice.
- */
+/** Clicks "Add to cart" once (the button is disabled until the page is interactive, and Playwright waits for that). */
 export async function addToCart(page: Page) {
-  const drawer = page.getByRole('dialog', { name: 'Cart' })
-  const cartButton = page.getByRole('banner').getByRole('button', { name: /^Cart/ })
-  const itemCount = async () => {
-    const label = (await cartButton.getAttribute('aria-label')) ?? ''
-    return Number(/(\d+)/.exec(label)?.[1] ?? 0)
-  }
-  const before = await itemCount()
-  await expect(async () => {
-    if (!(await drawer.isVisible()) && (await itemCount()) === before) {
-      await page.getByRole('button', { name: 'Add to cart' }).click()
-    }
-    await expect(drawer).toBeVisible({ timeout: 3000 })
-  }).toPass({ timeout: 20_000 })
+  await page.getByRole('button', { name: 'Add to cart' }).click()
+  await expect(page.getByRole('dialog', { name: 'Cart' })).toBeVisible({ timeout: 10_000 })
 }
 
 /** Adds the product to the cart and goes to checkout. */
