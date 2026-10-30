@@ -1,6 +1,10 @@
-import type { ServiceabilityInput, ServiceabilityResult, ShiprocketClient } from './types'
+import type { Booking, ServiceabilityInput, ServiceabilityResult, ShiprocketClient } from './types'
 
 const PINCODE = /^[0-9]{6}$/
+
+function digits(n: number): string {
+  return Array.from({ length: n }, () => Math.floor(Math.random() * 10)).join('')
+}
 
 /**
  * Deterministic stand-in for Shiprocket (spec section 11):
@@ -28,5 +32,20 @@ export const mockShiprocket: ShiprocketClient = {
       }
     }
     return { serviceable: true, codAvailable: true, etaDays: { min: 3, max: 5 } }
+  },
+  async bookShipment(): Promise<Booking> {
+    const awb = `MOCKAWB${digits(10)}`
+    return {
+      shiprocketOrderId: `MOCKSO${digits(8)}`,
+      shipmentId: `MOCKSH${digits(8)}`,
+      awb,
+      courierName: 'Mock Express',
+      labelUrl: `/dev/mock-label?awb=${awb}`,
+      trackingUrl: `https://shiprocket.co/tracking/${awb}`,
+    }
+  },
+  async cancelShipment(): Promise<void> {},
+  async trackAwb() {
+    return null
   },
 }

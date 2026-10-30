@@ -58,6 +58,7 @@ export const StoreSettings: GlobalConfig = {
               (siblingData as { pickupSameAsBusiness?: boolean } | undefined)?.pickupSameAsBusiness === false,
           },
         },
+        { name: 'shiprocketPickupName', type: 'text', defaultValue: 'Primary', access: { read: isAdminField } },
         { name: 'whatsappNumber', type: 'text' },
         { name: 'phone', type: 'text' },
         { name: 'email', type: 'email' },

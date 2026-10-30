@@ -1209,6 +1209,7 @@ export interface StoreSetting {
       stateCode?: string | null;
       pincode?: string | null;
     };
+    shiprocketPickupName?: string | null;
     whatsappNumber?: string | null;
     phone?: string | null;
     email?: string | null;
@@ -1355,6 +1356,7 @@ export interface StoreSettingsSelect<T extends boolean = true> {
               stateCode?: T;
               pincode?: T;
             };
+        shiprocketPickupName?: T;
         whatsappNumber?: T;
         phone?: T;
         email?: T;
