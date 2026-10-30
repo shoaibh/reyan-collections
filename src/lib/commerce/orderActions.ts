@@ -1,15 +1,17 @@
 import type { Payload } from 'payload'
 
 import { getRazorpay } from '@/lib/integrations/razorpay'
-import { getShiprocket } from '@/lib/integrations/shiprocket'
+import { getShiprocket, mapCourierStatus, type ShipmentInput } from '@/lib/integrations/shiprocket'
 import { notify } from '@/lib/notifications/notify'
 import type { NotifyEvent } from '@/lib/notifications/templates'
 import type { Order } from '@/payload-types'
 import { revalidate } from '@/lib/revalidate'
 
 import { withTransaction, type Tx } from './db'
+import { nextNumber } from './counters'
+import { financialYear, formatInvoiceNumber } from './invoice'
 import { lockOrder, productTags, stockItemsOf, withTimelineEntry } from './orderShared'
-import { assertTransition, canTransition, statusLabel, type OrderStatus } from './orderStateMachine'
+import { assertTransition, canTransition, nextStatuses, statusLabel, type OrderStatus } from './orderStateMachine'
 import { releaseStock } from './stock'
 
 export type ActionResult =
@@ -282,4 +284,182 @@ export async function cancelPendingOrder(
     notify: opts?.notify,
   })
   return result.ok && result.changed ? result.order : null
+}
+
+const COURIER_STATES: OrderStatus[] = ['shipped', 'out_for_delivery', 'delivered', 'rto']
+
+/** Books the courier, allocates the GST invoice number and moves a confirmed order to ready to ship. */
+export function shipOrder(payload: Payload, orderId: number): Promise<ActionResult> {
+  return runAction(payload, orderId, async (tx, order) => {
+    const status = order.status as OrderStatus
+    if (['ready_to_ship', 'shipped', 'out_for_delivery', 'delivered', 'rto', 'returned'].includes(status)) {
+      return { order, changed: false }
+    }
+    if (status !== 'confirmed') throw blocked('shipped', status)
+    assertTransition(status, 'ready_to_ship')
+
+    const settings = await payload.findGlobal({ slug: 'store-settings', depth: 0, req: tx.req })
+    const items = order.items ?? []
+    const weightKg = Number(
+      (items.reduce((sum, i) => sum + (i.weightGrams ?? 0) * (i.qty ?? 0), 0) / 1000).toFixed(3),
+    )
+    const volume = (i: (typeof items)[number]) => (i.lengthCm ?? 0) * (i.widthCm ?? 0) * (i.heightCm ?? 0)
+    const biggest = items.reduce<(typeof items)[number] | undefined>(
+      (best, i) => (best === undefined || volume(i) > volume(best) ? i : best),
+      undefined,
+    )
+    const input: ShipmentInput = {
+      orderNumber: order.orderNumber,
+      orderDate: order.createdAt,
+      pickupLocation: settings.business?.shiprocketPickupName || 'Primary',
+      customer: { name: order.customer?.name ?? '', phone: order.customer?.phone ?? '', email: order.customer?.email ?? null },
+      address: order.address,
+      items: items.map((i) => ({
+        name: i.title ?? '',
+        sku: i.variantId ?? '',
+        units: i.qty ?? 0,
+        sellingPrice: i.unitPrice ?? 0,
+        hsn: i.hsnCode ?? '',
+      })),
+      paymentMethod: order.paymentMethod === 'cod' ? 'COD' : 'Prepaid',
+      subTotal: order.total ?? 0,
+      weightKg,
+      lengthCm: biggest?.lengthCm ?? 0,
+      breadthCm: biggest?.widthCm ?? 0,
+      heightCm: biggest?.heightCm ?? 0,
+    }
+
+    let booking: Awaited<ReturnType<ReturnType<typeof getShiprocket>['bookShipment']>>
+    try {
+      booking = await getShiprocket().bookShipment(input)
+    } catch (err) {
+      payload.logger.error({ err, orderNumber: order.orderNumber }, 'Could not book the courier')
+      throw new ActionFailure(502, "Shiprocket couldn't book this order. Please try again.")
+    }
+    payload.logger.info({ orderNumber: order.orderNumber, awb: booking.awb }, 'Courier booked')
+
+    const now = new Date()
+    const fy = financialYear(now)
+    const prefix = settings.invoicing?.invoicePrefix || 'RC'
+    const number = formatInvoiceNumber(prefix, fy, await nextNumber(tx.db, `invoice:${fy}`, 0))
+    const at = now.toISOString()
+    const timeline = [
+      ...withTimelineEntry(order, {
+        status: 'ready_to_ship',
+        by: 'admin',
+        note: `Booked with ${booking.courierName} · AWB ${booking.awb}`,
+      }),
+      ...booking.warnings.map((note) => ({ status: 'ready_to_ship', by: 'system' as const, at, note })),
+    ]
+    const updated = await update(tx, payload, orderId, {
+      status: 'ready_to_ship',
+      shipment: {
+        ...order.shipment,
+        shiprocketOrderId: booking.shiprocketOrderId,
+        shipmentId: booking.shipmentId,
+        awb: booking.awb,
+        courierName: booking.courierName,
+        labelUrl: booking.labelUrl,
+        trackingUrl: booking.trackingUrl,
+      },
+      invoice: { number, issuedAt: at },
+      timeline,
+    })
+    return { order: updated, changed: true, notifications: [{ event: 'shipped' }] }
+  })
+}
+
+/** Shortest forward path from `from` to `to` through the courier states, excluding `from`; null if none. */
+function courierPath(from: OrderStatus, to: OrderStatus): OrderStatus[] | null {
+  const queue: { at: OrderStatus; path: OrderStatus[] }[] = [{ at: from, path: [] }]
+  const seen = new Set<OrderStatus>([from])
+  for (let head = 0; head < queue.length; head++) {
+    const { at, path } = queue[head]!
+    for (const next of nextStatuses(at)) {
+      if (seen.has(next) || !COURIER_STATES.includes(next)) continue
+      if (next === to) return [...path, next]
+      seen.add(next)
+      queue.push({ at: next, path: [...path, next] })
+    }
+  }
+  return null
+}
+
+/** Adds a phone to the COD blocklist unless it is already there. Runs inside the order transaction. */
+async function blocklistPhone(tx: Tx, payload: Payload, phone: string, reason: string): Promise<void> {
+  const existing = await payload.find({
+    collection: 'cod-blocklist',
+    where: { phone: { equals: phone } },
+    limit: 1,
+    depth: 0,
+    req: tx.req,
+  })
+  if (existing.docs.length > 0) return
+  try {
+    await payload.create({ collection: 'cod-blocklist', data: { phone, reason }, depth: 0, req: tx.req })
+  } catch (err) {
+    payload.logger.warn({ err }, 'Blocklist entry already exists')
+  }
+}
+
+/**
+ * Applies a courier tracking event: records it once, then walks the order forward through the state
+ * machine. An event that would move the order backwards is recorded but changes nothing else.
+ */
+export async function applyCourierEvent(
+  payload: Payload,
+  input: { awb: string; rawStatus: string; at: string; raw: unknown; source: 'webhook' | 'poll' | 'simulate' },
+): Promise<{ applied: OrderStatus[]; order: Order | null }> {
+  const found = await payload.find({
+    collection: 'orders',
+    where: { 'shipment.awb': { equals: input.awb } },
+    limit: 1,
+    depth: 0,
+  })
+  const orderId = found.docs[0]?.id
+  if (orderId === undefined) return { applied: [], order: null }
+
+  const applied: OrderStatus[] = []
+  const result = await runAction(payload, orderId, async (tx, order) => {
+    const at = new Date(input.at)
+    const when = Number.isNaN(at.getTime()) ? new Date().toISOString() : at.toISOString()
+    const events = order.shipment?.events ?? []
+    const duplicate = events.some(
+      (e) => e.status === input.rawStatus && e.at && new Date(e.at).getTime() === new Date(when).getTime(),
+    )
+    const data: Partial<Order> = {}
+    if (!duplicate) {
+      data.shipment = {
+        ...order.shipment,
+        events: [...events, { status: input.rawStatus, at: when, raw: input.raw as never }],
+      }
+    }
+
+    const target = mapCourierStatus(input.rawStatus)
+    const current = order.status as OrderStatus
+    const path = target && target !== current ? courierPath(current, target) : null
+    if (path && !duplicate) {
+      let timeline = order.timeline ?? []
+      let from = current
+      for (const step of path) {
+        assertTransition(from, step)
+        timeline = withTimelineEntry({ timeline }, { status: step, by: 'system', note: `Courier: ${input.rawStatus}` })
+        from = step
+      }
+      data.status = target!
+      data.timeline = timeline
+      if (target === 'delivered' && order.paymentMethod === 'cod') data.paymentStatus = 'cod_collected'
+      if (target === 'rto') {
+        if (order.paymentMethod === 'cod' && order.customer?.phone) {
+          await blocklistPhone(tx, payload, order.customer.phone, `Refused at the door (${order.orderNumber})`)
+          data.codBlocklisted = true
+        }
+        if (order.invoice?.number) data.creditNote = { ...order.creditNote, needed: true }
+      }
+      applied.push(...path)
+    }
+    if (Object.keys(data).length === 0) return { order, changed: false }
+    return { order: await update(tx, payload, orderId, data), changed: true }
+  })
+  return { applied, order: result.ok ? result.order : null }
 }
