@@ -1,3 +1,4 @@
+import { sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 
 import { getRazorpay } from '@/lib/integrations/razorpay'
@@ -329,6 +330,8 @@ export function shipOrder(payload: Payload, orderId: number): Promise<ActionResu
       heightCm: biggest?.heightCm ?? 0,
     }
 
+    // If the invoice or update step below fails after a successful booking, the transaction rolls back
+    // and the courier booking is orphaned. Accepted: the operator cancels it in Shiprocket.
     let booking: Awaited<ReturnType<ReturnType<typeof getShiprocket>['bookShipment']>>
     try {
       booking = await getShiprocket().bookShipment(input)
@@ -385,21 +388,23 @@ function courierPath(from: OrderStatus, to: OrderStatus): OrderStatus[] | null {
   return null
 }
 
-/** Adds a phone to the COD blocklist unless it is already there. Runs inside the order transaction. */
-async function blocklistPhone(tx: Tx, payload: Payload, phone: string, reason: string): Promise<void> {
-  const existing = await payload.find({
-    collection: 'cod-blocklist',
-    where: { phone: { equals: phone } },
-    limit: 1,
-    depth: 0,
-    req: tx.req,
-  })
-  if (existing.docs.length > 0) return
-  try {
-    await payload.create({ collection: 'cod-blocklist', data: { phone, reason }, depth: 0, req: tx.req })
-  } catch (err) {
-    payload.logger.warn({ err }, 'Blocklist entry already exists')
-  }
+/**
+ * Adds a phone to the COD blocklist unless it is already there. One statement, so a concurrent
+ * insert cannot abort the order transaction (a caught unique violation would).
+ */
+async function blocklistPhone(tx: Tx, phone: string, reason: string): Promise<void> {
+  await tx.db.execute(
+    sql`INSERT INTO cod_blocklist (phone, reason) VALUES (${phone}, ${reason}) ON CONFLICT (phone) DO NOTHING`,
+  )
+}
+
+const IST_NO_ZONE = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})$/
+
+/** Shiprocket sends IST wall-clock times without a zone; read those as +05:30. Null when unparseable. */
+export function parseCourierTime(value: string): string | null {
+  const m = IST_NO_ZONE.exec(value.trim())
+  const d = new Date(m ? `${m[1]}T${m[2]}+05:30` : value)
+  return Number.isNaN(d.getTime()) ? null : d.toISOString()
 }
 
 /**
@@ -421,8 +426,11 @@ export async function applyCourierEvent(
 
   const applied: OrderStatus[] = []
   const result = await runAction(payload, orderId, async (tx, order) => {
-    const at = new Date(input.at)
-    const when = Number.isNaN(at.getTime()) ? new Date().toISOString() : at.toISOString()
+    let when = parseCourierTime(input.at)
+    if (!when) {
+      payload.logger.warn({ at: input.at, awb: input.awb }, 'Unreadable courier timestamp, using now')
+      when = new Date().toISOString()
+    }
     const events = order.shipment?.events ?? []
     const duplicate = events.some(
       (e) => e.status === input.rawStatus && e.at && new Date(e.at).getTime() === new Date(when).getTime(),
@@ -451,7 +459,7 @@ export async function applyCourierEvent(
       if (target === 'delivered' && order.paymentMethod === 'cod') data.paymentStatus = 'cod_collected'
       if (target === 'rto') {
         if (order.paymentMethod === 'cod' && order.customer?.phone) {
-          await blocklistPhone(tx, payload, order.customer.phone, `Refused at the door (${order.orderNumber})`)
+          await blocklistPhone(tx, order.customer.phone, `Refused at the door (${order.orderNumber})`)
           data.codBlocklisted = true
         }
         if (order.invoice?.number) data.creditNote = { ...order.creditNote, needed: true }

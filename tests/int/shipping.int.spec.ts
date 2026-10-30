@@ -8,7 +8,7 @@ import { POST as checkoutPost } from '@/app/(frontend)/api/checkout/route'
 import { POST as shiprocketWebhookPost } from '@/app/(frontend)/api/webhooks/shiprocket/route'
 import { drizzleFor } from '@/lib/commerce/db'
 import { financialYear } from '@/lib/commerce/invoice'
-import { applyCourierEvent, confirmOrder, shipOrder } from '@/lib/commerce/orderActions'
+import { applyCourierEvent, parseCourierTime, confirmOrder, shipOrder } from '@/lib/commerce/orderActions'
 import { markPaid } from '@/lib/commerce/payments'
 import { computeCheckout } from '@/lib/commerce/quote'
 import { MOCK_SHIPROCKET_WEBHOOK_TOKEN } from '@/lib/integrations/shiprocket'
@@ -151,6 +151,7 @@ describe('shipping and courier events', () => {
     const order = await confirmed('cod')
     const [a, b] = await Promise.all([shipOrder(payload, order.id), shipOrder(payload, order.id)])
     expect([a.ok, b.ok]).toEqual([true, true])
+    expect([a, b].filter((r) => r.ok && r.changed)).toHaveLength(1)
     expect(spy).toHaveBeenCalledTimes(1)
     const after = await reload(order.id)
     expect(after.invoice?.number).toBe(`RC/${fy}/0002`)
@@ -273,5 +274,55 @@ describe('shipping and courier events', () => {
       limit: 5,
     })
     expect(none.docs).toHaveLength(0)
+  })
+
+  it('keeps one blocklist entry and still reaches rto when the phone is already listed', async () => {
+    const phone = nextPhone()
+    const order = await shipped('cod', phone)
+    await payload.create({ collection: 'cod-blocklist', data: { phone, reason: 'Manual' }, depth: 0 })
+    await event(order.shipment!.awb as string, 'RTO INITIATED')
+    const after = await reload(order.id)
+    expect(after.status).toBe('rto')
+    expect(after.codBlocklisted).toBe(true)
+    const listed = await payload.find({ collection: 'cod-blocklist', where: { phone: { equals: phone } }, limit: 5 })
+    expect(listed.docs).toHaveLength(1)
+    expect(listed.docs[0]!.reason).toBe('Manual')
+  })
+
+  it('reads a zoneless Shiprocket timestamp as IST', () => {
+    expect(parseCourierTime('2026-10-30 14:05:00')).toBe('2026-10-30T08:35:00.000Z')
+    expect(parseCourierTime('2026-10-30T08:35:00.000Z')).toBe('2026-10-30T08:35:00.000Z')
+    expect(parseCourierTime('garbage')).toBeNull()
+  })
+
+  it('records a retried webhook with a zoneless timestamp once', async () => {
+    const order = await shipped('prepaid')
+    const awb = order.shipment!.awb as string
+    const body = { awb, current_status: 'PICKED UP', current_timestamp: '2026-10-30 14:05:00' }
+    await webhook(body, MOCK_SHIPROCKET_WEBHOOK_TOKEN)
+    await webhook(body, MOCK_SHIPROCKET_WEBHOOK_TOKEN)
+    const events = (await reload(order.id)).shipment?.events ?? []
+    expect(events).toHaveLength(1)
+    expect(new Date(events[0]!.at as string).toISOString()).toBe('2026-10-30T08:35:00.000Z')
+  })
+
+  it('moves a shipped order to out for delivery on OUT FOR DELIVERY', async () => {
+    const order = await shipped('prepaid')
+    const awb = order.shipment!.awb as string
+    await event(awb, 'PICKED UP', '2026-10-30T08:00:00.000Z')
+    expect((await reload(order.id)).status).toBe('shipped')
+    const { applied } = await event(awb, 'OUT FOR DELIVERY', '2026-10-30T09:00:00.000Z')
+    expect(applied).toEqual(['out_for_delivery'])
+    expect((await reload(order.id)).status).toBe('out_for_delivery')
+  })
+
+  it('moves an out-for-delivery order to rto on RTO INITIATED', async () => {
+    const order = await shipped('prepaid')
+    const awb = order.shipment!.awb as string
+    await event(awb, 'OUT FOR DELIVERY', '2026-10-30T09:00:00.000Z')
+    expect((await reload(order.id)).status).toBe('out_for_delivery')
+    const { applied } = await event(awb, 'RTO INITIATED', '2026-10-30T12:00:00.000Z')
+    expect(applied).toEqual(['rto'])
+    expect((await reload(order.id)).status).toBe('rto')
   })
 })
