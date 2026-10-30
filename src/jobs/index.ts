@@ -35,11 +35,9 @@ export const jobTasks: TaskConfig[] = [
   },
 ] as TaskConfig[]
 
-/** Cron runner config. Off when JOBS_AUTORUN=false (tests) and while `next build` collects page data. */
+/** Cron runner config. Off when JOBS_AUTORUN=false (tests); Payload itself skips autoRun during `next build`. */
 export const jobsAutoRun = () =>
-  process.env.JOBS_AUTORUN === 'false' || process.env.NEXT_PHASE === 'phase-production-build'
-    ? []
-    : [{ cron: '* * * * *', queue: 'default' }]
+  process.env.JOBS_AUTORUN === 'false' ? [] : [{ cron: '* * * * *', queue: 'default' }]
 
 const NO_STORE = { 'Cache-Control': 'no-store' }
 
@@ -56,13 +54,20 @@ export const runJobsNowEndpoint: Endpoint = {
     }
     if (!req.user) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: NO_STORE })
 
-    let body: { aheadMinutes?: unknown } = {}
+    const invalid = Response.json(
+      { error: 'aheadMinutes must be a whole number of minutes between 0 and 10080' },
+      { status: 400, headers: NO_STORE },
+    )
+    let body: { aheadMinutes?: unknown } | null = null
     try {
-      body = (await req.json?.()) ?? {}
+      const text = (await req.text?.()) ?? ''
+      body = text.trim() === '' ? {} : JSON.parse(text)
     } catch {
-      body = {}
+      return invalid
     }
-    const ahead = typeof body.aheadMinutes === 'number' && Number.isFinite(body.aheadMinutes) ? body.aheadMinutes : 0
+    if (body === null || typeof body !== 'object' || Array.isArray(body)) return invalid
+    const ahead = body.aheadMinutes === undefined ? 0 : body.aheadMinutes
+    if (typeof ahead !== 'number' || !Number.isInteger(ahead) || ahead < 0 || ahead > 10_080) return invalid
     const now = new Date(Date.now() + ahead * 60_000)
     const cancelled = [
       ...(await expirePendingPayments(req.payload, now)),

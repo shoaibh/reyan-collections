@@ -32,7 +32,7 @@ const stockOf = async (line: Line) => {
   return Number(r.rows[0]!.stock)
 }
 
-async function place(paymentMethod: 'cod' | 'prepaid') {
+async function place(paymentMethod: 'cod' | 'prepaid', email = '') {
   seq++
   const phone = nextPhone()
   const items = [{ ...sand, qty: 1 }]
@@ -44,7 +44,7 @@ async function place(paymentMethod: 'cod' | 'prepaid') {
       body: JSON.stringify({
         name: 'Asha Verma',
         phone,
-        email: '',
+        email,
         line1: '12 MG Road',
         line2: '',
         landmark: '',
@@ -74,12 +74,22 @@ async function backdate(id: number, interval: string) {
   await db.execute(sql`UPDATE orders SET created_at = now() - ${interval}::interval WHERE id = ${id}`)
 }
 
-const callRunJobs = (user: unknown, body: unknown) =>
-  runJobsNowEndpoint.handler({
-    payload,
-    user,
-    json: async () => body,
-  } as unknown as PayloadRequest)
+const ADMIN = { id: 1 }
+const callRunJobsRaw = (text: string | null, user: unknown = ADMIN) =>
+  runJobsNowEndpoint.handler(
+    Object.assign(
+      new Request('http://localhost/api/dev/run-jobs', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: text,
+      }),
+      { payload, user },
+    ) as unknown as PayloadRequest,
+  )
+
+const callRunJobs = (user: unknown, body: unknown) => callRunJobsRaw(JSON.stringify(body), user)
+
+const badMinutes = { error: 'aheadMinutes must be a whole number of minutes between 0 and 10080' }
 
 describe('scheduled jobs and the run-now tool', () => {
   beforeAll(async () => {
@@ -188,17 +198,23 @@ describe('scheduled jobs and the run-now tool', () => {
   })
 
   it('rejects the run-jobs endpoint without a user', async () => {
-    const res = await callRunJobs(undefined, {})
+    const res = await callRunJobs(null, {})
     expect(res.status).toBe(401)
     expect(await res.json()).toEqual({ error: 'Unauthorized' })
   })
 
+  it('leaves a fresh pending order alone when the admin runs the jobs without a shift', async () => {
+    const order = await place('prepaid')
+
+    const res = await callRunJobs({ id: 1 }, {})
+
+    expect(res.status).toBe(200)
+    expect((await res.json()).cancelled).not.toContain(order.orderNumber)
+    expect((await reload(order.id)).status).toBe('pending_payment')
+  })
+
   it('runs the jobs ahead of time for an admin and cancels a fresh pending order', async () => {
     const order = await place('prepaid')
-    const none = await callRunJobs({ id: 1 }, {})
-    expect(none.status).toBe(200)
-    expect((await none.json()).cancelled).not.toContain(order.orderNumber)
-    expect((await reload(order.id)).status).toBe('pending_payment')
 
     const res = await callRunJobs({ id: 1 }, { aheadMinutes: 60 })
 
@@ -208,6 +224,73 @@ describe('scheduled jobs and the run-now tool', () => {
     expect(body.cancelled).toContain(order.orderNumber)
     expect(typeof body.polled).toBe('number')
     expect((await reload(order.id)).status).toBe('cancelled')
+  })
+
+  it('accepts an absent body', async () => {
+    const res = await callRunJobsRaw(null)
+    expect(res.status).toBe(200)
+    expect(typeof (await res.json()).polled).toBe('number')
+  })
+
+  it('rejects a non-numeric aheadMinutes', async () => {
+    const res = await callRunJobs({ id: 1 }, { aheadMinutes: 'abc' })
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual(badMinutes)
+  })
+
+  it('rejects a negative aheadMinutes', async () => {
+    const res = await callRunJobs({ id: 1 }, { aheadMinutes: -5 })
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual(badMinutes)
+  })
+
+  it('rejects malformed JSON', async () => {
+    const res = await callRunJobsRaw('{nope')
+    expect(res.status).toBe(400)
+  })
+
+  it('creates a cancelled email when expiry cancels an order that has an email address', async () => {
+    const order = await place('prepaid', 'asha@example.com')
+    await backdate(order.id, '31 minutes')
+
+    await expirePendingPayments(payload, new Date())
+
+    const sent = await payload.find({
+      collection: 'dev-emails',
+      where: { orderNumber: { equals: order.orderNumber }, tag: { equals: 'cancelled' } },
+      limit: 5,
+    })
+    expect(sent.docs).toHaveLength(1)
+    expect(sent.docs[0]).toMatchObject({ to: 'asha@example.com' })
+  })
+
+  it('changes nothing when the courier has no news', async () => {
+    const order = await place('cod')
+    await confirmOrder(payload, order.id)
+    expect((await shipOrder(payload, order.id)).ok).toBe(true)
+    vi.spyOn(mockShiprocket, 'trackAwb').mockResolvedValue(null)
+
+    expect(await pollShipmentStatus(payload)).toBe(0)
+    expect((await reload(order.id)).status).toBe('ready_to_ship')
+  })
+
+  it('keeps polling the next order when the courier call fails for one', async () => {
+    const first = await place('cod')
+    const second = await place('cod')
+    for (const o of [first, second]) {
+      await confirmOrder(payload, o.id)
+      expect((await shipOrder(payload, o.id)).ok).toBe(true)
+    }
+    const firstAwb = (await reload(first.id)).shipment!.awb as string
+    vi.spyOn(mockShiprocket, 'trackAwb').mockImplementation(async (awb) => {
+      if (awb === firstAwb) throw new Error('courier down')
+      return { status: 'DELIVERED', at: new Date().toISOString() }
+    })
+
+    await pollShipmentStatus(payload)
+
+    expect((await reload(first.id)).status).toBe('ready_to_ship')
+    expect((await reload(second.id)).status).toBe('delivered')
   })
 
   it('hides the run-jobs endpoint in production', async () => {
