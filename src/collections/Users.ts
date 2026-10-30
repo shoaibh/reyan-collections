@@ -10,6 +10,7 @@ export const Users: CollectionConfig = {
     lockTime: 600_000,
   },
   fields: [
+    { name: 'name', type: 'text' },
     {
       name: 'role',
       type: 'select',

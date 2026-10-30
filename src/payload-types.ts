@@ -153,6 +153,7 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
+  name?: string | null;
   role: 'owner';
   updatedAt: string;
   createdAt: string;
@@ -486,6 +487,13 @@ export interface Order {
     message?: string | null;
     handled?: boolean | null;
   };
+  restocked?: boolean | null;
+  creditNote?: {
+    needed?: boolean | null;
+    handled?: boolean | null;
+  };
+  refundNote?: string | null;
+  codBlocklisted?: boolean | null;
   notes?: string | null;
   updatedAt: string;
   createdAt: string;
@@ -679,6 +687,7 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  name?: T;
   role?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -996,6 +1005,15 @@ export interface OrdersSelect<T extends boolean = true> {
         message?: T;
         handled?: T;
       };
+  restocked?: T;
+  creditNote?:
+    | T
+    | {
+        needed?: T;
+        handled?: T;
+      };
+  refundNote?: T;
+  codBlocklisted?: T;
   notes?: T;
   updatedAt?: T;
   createdAt?: T;

@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 
 import type { Order } from '@/payload-types'
 import { getRazorpay } from '@/lib/integrations/razorpay'
+import { notify } from '@/lib/notifications/notify'
 import { revalidate } from '@/lib/revalidate'
 
 import { withTransaction } from './db'
@@ -106,6 +107,12 @@ export async function markPaid(
   })
 
   if (result.stockChanged) revalidate(productTags((result.order.items ?? []).map((i) => i.slug ?? '')))
+  if (result.outcome === 'confirmed' || result.outcome === 'late_confirmed') {
+    await notify(payload, 'order_paid', result.order)
+    await notify(payload, 'admin_new_order', result.order)
+  } else if (result.outcome === 'late_refunded') {
+    await notify(payload, 'refunded', result.order, { refundAmount: result.order.total ?? 0 })
+  }
   return { outcome: result.outcome, order: result.order }
 }
 

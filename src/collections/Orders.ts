@@ -145,6 +145,18 @@ export const Orders: CollectionConfig = {
       admin: ro,
       fields: [text('message'), { name: 'handled', type: 'checkbox', admin: ro }],
     },
+    { name: 'restocked', type: 'checkbox', admin: ro },
+    {
+      name: 'creditNote',
+      type: 'group',
+      admin: ro,
+      fields: [
+        { name: 'needed', type: 'checkbox', admin: ro },
+        { name: 'handled', type: 'checkbox', admin: ro },
+      ],
+    },
+    text('refundNote'),
+    { name: 'codBlocklisted', type: 'checkbox', admin: ro },
     { name: 'notes', type: 'textarea' },
   ],
 }

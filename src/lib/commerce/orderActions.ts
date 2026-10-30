@@ -1,0 +1,255 @@
+import type { Payload } from 'payload'
+
+import { getRazorpay } from '@/lib/integrations/razorpay'
+import { getShiprocket } from '@/lib/integrations/shiprocket'
+import { notify } from '@/lib/notifications/notify'
+import type { NotifyEvent } from '@/lib/notifications/templates'
+import type { Order } from '@/payload-types'
+import { revalidate } from '@/lib/revalidate'
+
+import { withTransaction, type Tx } from './db'
+import { lockOrder, productTags, stockItemsOf, withTimelineEntry } from './orderOps'
+import { canTransition, statusLabel, type OrderStatus } from './orderStateMachine'
+import { releaseStock } from './stock'
+
+export type ActionResult =
+  | { ok: true; order: Order; changed: boolean }
+  | { ok: false; status: 400 | 404 | 409 | 502; error: string }
+
+type By = 'system' | 'admin'
+type Failure = Extract<ActionResult, { ok: false }>
+
+/** Thrown inside the transaction to roll it back and hand the caller a clean failure. */
+class ActionFailure extends Error {
+  constructor(
+    readonly status: Failure['status'],
+    message: string,
+  ) {
+    super(message)
+  }
+}
+
+type Outcome = {
+  order: Order
+  changed: boolean
+  stockChanged?: boolean
+  /** Notifications to send once the transaction has committed. */
+  notifications?: { event: NotifyEvent; extra?: { refundAmount?: number } }[]
+}
+
+const AFTER_CONFIRMED: OrderStatus[] = [
+  'confirmed',
+  'ready_to_ship',
+  'shipped',
+  'out_for_delivery',
+  'delivered',
+  'rto',
+  'returned',
+]
+
+const blocked = (verb: string, status: OrderStatus) =>
+  new ActionFailure(409, `This order can't be ${verb} from ${statusLabel(status)}.`)
+
+const update = (tx: Tx, payload: Payload, orderId: number, data: Partial<Order>) =>
+  payload.update({ collection: 'orders', id: orderId, depth: 0, req: tx.req, data })
+
+/**
+ * The shared shape of every action: lock the order row, re-read it inside the lock, let `body`
+ * decide (a repeat becomes a no-op) and mutate, commit, then refresh the storefront and notify.
+ */
+async function runAction(
+  payload: Payload,
+  orderId: number,
+  body: (tx: Tx, order: Order) => Promise<Outcome>,
+): Promise<ActionResult> {
+  let outcome: Outcome
+  try {
+    outcome = await withTransaction(payload, async (tx) => {
+      await lockOrder(tx.db, orderId)
+      let order: Order
+      try {
+        order = await payload.findByID({ collection: 'orders', id: orderId, depth: 0, req: tx.req })
+      } catch {
+        throw new ActionFailure(404, 'Order not found')
+      }
+      return body(tx, order)
+    })
+  } catch (err) {
+    if (err instanceof ActionFailure) return { ok: false, status: err.status, error: err.message }
+    throw err
+  }
+  if (outcome.stockChanged) revalidate(productTags((outcome.order.items ?? []).map((i) => i.slug ?? '')))
+  for (const n of outcome.notifications ?? []) await notify(payload, n.event, outcome.order, n.extra)
+  return { ok: true, order: outcome.order, changed: outcome.changed }
+}
+
+/** Refunds a paid prepaid order in full while the order lock is held. */
+async function refundInLock(order: Order): Promise<{ refundId: string; amount: number }> {
+  const paymentId = order.razorpay?.paymentId
+  if (!paymentId) throw new ActionFailure(502, "We couldn't process the refund. Please try again.")
+  const amount = order.total ?? 0
+  try {
+    const refund = await getRazorpay().refund(paymentId, amount * 100)
+    return { refundId: refund.id, amount }
+  } catch {
+    throw new ActionFailure(502, "We couldn't process the refund. Please try again.")
+  }
+}
+
+const isPaidPrepaid = (order: Order) => order.paymentMethod === 'prepaid' && order.paymentStatus === 'paid'
+
+/** Awaiting confirmation → confirmed, once the customer has said yes on WhatsApp. */
+export function confirmOrder(payload: Payload, orderId: number): Promise<ActionResult> {
+  return runAction(payload, orderId, async (tx, order) => {
+    const status = order.status as OrderStatus
+    if (AFTER_CONFIRMED.includes(status)) return { order, changed: false }
+    if (status !== 'awaiting_confirmation') throw blocked('confirmed', status)
+    const updated = await update(tx, payload, orderId, {
+      status: 'confirmed',
+      timeline: withTimelineEntry(order, { status: 'confirmed', by: 'admin', note: 'Confirmed on WhatsApp' }),
+    })
+    return { order: updated, changed: true, notifications: [{ event: 'cod_confirmed' }] }
+  })
+}
+
+/**
+ * Cancels an order that has not shipped: cancels the courier booking, puts stock back and refunds a
+ * paid prepaid order. The network calls run under the row lock, so a double tap books one refund.
+ */
+export function cancelOrder(
+  payload: Payload,
+  orderId: number,
+  opts: { by: By; note: string; allowFrom?: OrderStatus[] },
+): Promise<ActionResult> {
+  const allowFrom = opts.allowFrom ?? ['pending_payment', 'awaiting_confirmation', 'confirmed', 'ready_to_ship']
+  return runAction(payload, orderId, async (tx, order) => {
+    const status = order.status as OrderStatus
+    if (status === 'cancelled') return { order, changed: false }
+    if (!allowFrom.includes(status) || !canTransition(status, 'cancelled')) throw blocked('cancelled', status)
+
+    const shiprocketOrderId = order.shipment?.shiprocketOrderId
+    if (shiprocketOrderId) {
+      try {
+        await getShiprocket().cancelShipment(shiprocketOrderId)
+      } catch (err) {
+        payload.logger.error({ err, orderNumber: order.orderNumber }, 'Could not cancel the courier booking')
+        throw new ActionFailure(502, "We couldn't cancel the courier booking. Please try again.")
+      }
+    }
+
+    await releaseStock(tx.db, stockItemsOf(order))
+
+    const data: Partial<Order> = {
+      status: 'cancelled',
+      timeline: withTimelineEntry(order, { status: 'cancelled', by: opts.by, note: opts.note }),
+    }
+    let refundAmount: number | undefined
+    if (isPaidPrepaid(order)) {
+      const refund = await refundInLock(order)
+      refundAmount = refund.amount
+      data.paymentStatus = 'refunded'
+      data.razorpay = { ...order.razorpay, refundId: refund.refundId }
+    }
+    const updated = await update(tx, payload, orderId, data)
+    return {
+      order: updated,
+      changed: true,
+      stockChanged: true,
+      notifications: [{ event: 'cancelled', extra: refundAmount === undefined ? undefined : { refundAmount } }],
+    }
+  })
+}
+
+/** Shipped or out for delivery → delivered. A COD order is also marked as paid in cash. */
+export function markDelivered(
+  payload: Payload,
+  orderId: number,
+  opts: { by: By; note?: string },
+): Promise<ActionResult> {
+  return runAction(payload, orderId, async (tx, order) => {
+    const status = order.status as OrderStatus
+    if (status === 'delivered') return { order, changed: false }
+    if (!canTransition(status, 'delivered')) throw blocked('marked delivered', status)
+    const data: Partial<Order> = {
+      status: 'delivered',
+      timeline: withTimelineEntry(order, { status: 'delivered', by: opts.by, note: opts.note ?? 'Delivered' }),
+    }
+    if (order.paymentMethod === 'cod') data.paymentStatus = 'cod_collected'
+    return { order: await update(tx, payload, orderId, data), changed: true }
+  })
+}
+
+/** Delivered → returned, optionally restocking, with a refund for prepaid and a note for COD cash. */
+export function markReturned(
+  payload: Payload,
+  orderId: number,
+  opts: { restock: boolean; refundNote?: string },
+): Promise<ActionResult> {
+  return runAction(payload, orderId, async (tx, order) => {
+    const status = order.status as OrderStatus
+    if (status === 'returned') return { order, changed: false }
+    if (!canTransition(status, 'returned')) throw blocked('marked returned', status)
+    const refundNote = opts.refundNote?.trim()
+    const cod = order.paymentMethod === 'cod'
+    if (cod && !refundNote) throw new ActionFailure(400, 'Add a note about the cash refund')
+
+    const data: Partial<Order> = {
+      status: 'returned',
+      timeline: withTimelineEntry(order, {
+        status: 'returned',
+        by: 'admin',
+        note: opts.restock ? 'Returned; stock restored' : 'Returned',
+      }),
+    }
+    const notifications: Outcome['notifications'] = []
+    if (opts.restock && !order.restocked) {
+      await releaseStock(tx.db, stockItemsOf(order))
+      data.restocked = true
+    }
+    if (cod) data.refundNote = refundNote
+    if (isPaidPrepaid(order)) {
+      const refund = await refundInLock(order)
+      data.paymentStatus = 'refunded'
+      data.razorpay = { ...order.razorpay, refundId: refund.refundId }
+      notifications.push({ event: 'refunded', extra: { refundAmount: refund.amount } })
+    }
+    if (order.invoice?.number) data.creditNote = { ...order.creditNote, needed: true }
+    return {
+      order: await update(tx, payload, orderId, data),
+      changed: true,
+      stockChanged: data.restocked === true,
+      notifications,
+    }
+  })
+}
+
+/** Puts the stock of a returned-to-us or returned order back on the shelf, once. */
+export function restockOrder(payload: Payload, orderId: number): Promise<ActionResult> {
+  return runAction(payload, orderId, async (tx, order) => {
+    const status = order.status as OrderStatus
+    if (status !== 'rto' && status !== 'returned') throw blocked('restocked', status)
+    if (order.restocked) return { order, changed: false }
+    await releaseStock(tx.db, stockItemsOf(order))
+    const updated = await update(tx, payload, orderId, {
+      restocked: true,
+      timeline: withTimelineEntry(order, { status, by: 'admin', note: 'Stock restored' }),
+    })
+    return { order: updated, changed: true, stockChanged: true }
+  })
+}
+
+/** Marks an order's alert, or its credit note task, as handled. */
+export function handleAlert(
+  payload: Payload,
+  orderId: number,
+  kind: 'alert' | 'creditNote',
+): Promise<ActionResult> {
+  return runAction(payload, orderId, async (tx, order) => {
+    if (kind === 'alert' ? order.alert?.handled : order.creditNote?.handled) return { order, changed: false }
+    const data: Partial<Order> =
+      kind === 'alert'
+        ? { alert: { ...order.alert, handled: true } }
+        : { creditNote: { ...order.creditNote, handled: true } }
+    return { order: await update(tx, payload, orderId, data), changed: true }
+  })
+}

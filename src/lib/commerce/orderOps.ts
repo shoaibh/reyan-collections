@@ -2,11 +2,10 @@ import { sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 
 import type { Order } from '@/payload-types'
-import { revalidate } from '@/lib/revalidate'
 
-import { withTransaction, type SqlExecutor } from './db'
-import { assertTransition, type OrderStatus } from './orderStateMachine'
-import { releaseStock, type StockItem } from './stock'
+import type { SqlExecutor } from './db'
+import type { OrderStatus } from './orderStateMachine'
+import type { StockItem } from './stock'
 
 /** Serialises concurrent changes to one order (webhook, admin, expiry job) until the transaction ends. */
 export async function lockOrder(db: SqlExecutor, orderId: number): Promise<void> {
@@ -25,6 +24,13 @@ export const productTags = (slugs: string[]): string[] => [
   ...slugs.filter(Boolean).map((s) => `product:${s}`),
 ]
 
+export const stockItemsOf = (order: Pick<Order, 'items'>): StockItem[] =>
+  (order.items ?? []).map((i) => ({
+    productId: i.productId as number,
+    variantId: i.variantId as string,
+    qty: i.qty as number,
+  }))
+
 /**
  * Cancels an order that has not been confirmed yet, putting its stock back. Returns the cancelled
  * order, or null when it is no longer pending (already paid, confirmed, or cancelled).
@@ -34,28 +40,12 @@ export async function cancelPendingOrder(
   orderId: number,
   note: string,
 ): Promise<Order | null> {
-  const cancelled = await withTransaction(payload, async (tx) => {
-    await lockOrder(tx.db, orderId)
-    const order = await payload.findByID({ collection: 'orders', id: orderId, depth: 0, req: tx.req })
-    if (order.status !== 'pending_payment' && order.status !== 'awaiting_confirmation') return null
-    assertTransition(order.status, 'cancelled')
-    const items: StockItem[] = (order.items ?? []).map((i) => ({
-      productId: i.productId as number,
-      variantId: i.variantId as string,
-      qty: i.qty as number,
-    }))
-    await releaseStock(tx.db, items)
-    return payload.update({
-      collection: 'orders',
-      id: orderId,
-      depth: 0,
-      req: tx.req,
-      data: {
-        status: 'cancelled',
-        timeline: withTimelineEntry(order, { status: 'cancelled', by: 'system', note }),
-      },
-    })
+  // Loaded on demand: orderActions imports the helpers above, so a static import would be circular.
+  const { cancelOrder } = await import('./orderActions')
+  const result = await cancelOrder(payload, orderId, {
+    by: 'system',
+    note,
+    allowFrom: ['pending_payment', 'awaiting_confirmation'],
   })
-  if (cancelled) revalidate(productTags((cancelled.items ?? []).map((i) => i.slug ?? '')))
-  return cancelled
+  return result.ok && result.changed ? result.order : null
 }

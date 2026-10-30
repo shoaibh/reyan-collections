@@ -6,6 +6,7 @@ import type { Payload } from 'payload'
 import { formatINR } from '@/lib/format'
 import { getRazorpay } from '@/lib/integrations/razorpay'
 import { getTurnstile } from '@/lib/integrations/turnstile'
+import { notify } from '@/lib/notifications/notify'
 import type { Order } from '@/payload-types'
 import { revalidate } from '@/lib/revalidate'
 
@@ -230,6 +231,12 @@ export async function placeOrder(
 
   // 8. Stock changed, so refresh the storefront
   revalidate(productTags(lines.map((l) => l.slug)))
+
+  // Cash on delivery: the order is placed, so tell the customer and the owner
+  if (cod) {
+    await notify(payload, 'order_received', order)
+    await notify(payload, 'admin_new_order', order)
+  }
 
   // 9. Prepaid: open the Razorpay order
   if (!cod) {

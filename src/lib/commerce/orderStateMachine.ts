@@ -52,3 +52,19 @@ export function assertTransition(
 export function nextStatuses(from: OrderStatus): OrderStatus[] {
   return [...TRANSITIONS[from]]
 }
+
+const STATUS_LABELS: Record<OrderStatus, string> = {
+  pending_payment: 'Payment pending',
+  awaiting_confirmation: 'Awaiting confirmation',
+  confirmed: 'Confirmed',
+  ready_to_ship: 'Ready to ship',
+  shipped: 'Shipped',
+  out_for_delivery: 'Out for delivery',
+  delivered: 'Delivered',
+  rto: 'Returned to us',
+  returned: 'Returned',
+  cancelled: 'Cancelled',
+}
+
+/** The customer-facing name of a status, used in admin error messages. */
+export const statusLabel = (status: OrderStatus): string => STATUS_LABELS[status]

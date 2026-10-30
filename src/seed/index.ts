@@ -51,9 +51,9 @@ async function upsertAdmin(payload: Payload) {
   })
   const id = existing.docs[0]?.id
   if (id === undefined) {
-    await payload.create({ collection: 'users', data: { email, password, role: 'owner' } })
+    await payload.create({ collection: 'users', data: { email, password, name: 'Shoaib', role: 'owner' } })
   } else {
-    await payload.update({ collection: 'users', id, data: { password } })
+    await payload.update({ collection: 'users', id, data: { password, name: 'Shoaib' } })
   }
 }
 
