@@ -1,11 +1,12 @@
 import { getPayload, Payload } from 'payload'
 import config from '@/payload.config'
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { GET as getServiceability } from '@/app/(frontend)/api/serviceability/route'
 import { GET as getCartLines } from '@/app/(frontend)/api/cart-lines/route'
 import { GET as getStock } from '@/app/(frontend)/api/stock/route'
+import { mockShiprocket } from '@/lib/integrations/shiprocket/mock'
 import { seed, wipe } from '@/seed'
 
 let payload: Payload
@@ -13,8 +14,10 @@ let payload: Payload
 const stock = (ids: string) => getStock(new Request(`http://localhost/api/stock?ids=${ids}`))
 const cartLines = (items: string) =>
   getCartLines(new Request(`http://localhost/api/cart-lines?items=${encodeURIComponent(items)}`))
-const serviceability = (query: string) =>
-  getServiceability(new Request(`http://localhost/api/serviceability?${query}`))
+const serviceability = (query: string, ip?: string) =>
+  getServiceability(
+    new Request(`http://localhost/api/serviceability?${query}`, ip ? { headers: { 'x-forwarded-for': ip } } : {}),
+  )
 
 describe('storefront API routes', () => {
   beforeAll(async () => {
@@ -144,5 +147,20 @@ describe('storefront API routes', () => {
 
     expect((await serviceability('pincode=12345&weight=800')).status).toBe(400)
     expect((await serviceability('pincode=226010&weight=abc')).status).toBe(400)
+  })
+
+  it('answers 503 when the courier check fails, and limits checks per IP', async () => {
+    const spy = vi.spyOn(mockShiprocket, 'checkServiceability').mockRejectedValueOnce(new Error('down'))
+    const down = await serviceability('pincode=226010&weight=800', '10.61.0.1')
+    expect(down.status).toBe(503)
+    expect(down.headers.get('cache-control')).toBe('no-store')
+    expect(await down.json()).toEqual({ error: "We couldn't check delivery right now. Please try again." })
+    spy.mockRestore()
+
+    const ip = '10.61.0.2'
+    for (let i = 0; i < 120; i++) expect((await serviceability('pincode=226010&weight=800', ip)).status).toBe(200)
+    const limited = await serviceability('pincode=226010&weight=800', ip)
+    expect(limited.status).toBe(429)
+    expect(await limited.json()).toEqual({ error: 'Too many attempts. Please try again in an hour.' })
   })
 })

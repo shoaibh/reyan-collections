@@ -106,6 +106,10 @@ describe('commerce infrastructure', () => {
     await db.execute(sql`UPDATE rate_limits SET created_at = now() - interval '2 hours' WHERE key = 'infra-a'`)
     expect(await hitRateLimit(payload, 'infra-a', opts)).toBe(true)
 
+    // parallel hits on one key cannot exceed the limit
+    const burst = await Promise.all(Array.from({ length: 5 }, () => hitRateLimit(payload, 'infra-par', opts)))
+    expect(burst.filter(Boolean)).toHaveLength(2)
+
     // settings
     expect(await loadCommerceSettings(payload)).toMatchObject({
       shippingFee: 49,

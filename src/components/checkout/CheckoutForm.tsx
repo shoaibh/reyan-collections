@@ -132,6 +132,11 @@ export function CheckoutForm({ turnstile, prepaidDiscount }: Props) {
       if (controller.signal.aborted) return
       setResult({ key: requestKey, quote })
       if (!quote) return
+      // The quote clamps lines to live stock: write that back so the cart, the summary and the order agree
+      for (const line of quote.lines) {
+        const sent = request.items.find((i) => i.productId === line.productId && i.variantId === line.variantId)
+        if (sent && sent.qty > line.qty) cart.setQty(line.productId, line.variantId, line.qty)
+      }
       // Fill city and state from the pincode, never over what the shopper typed
       const d = quote.delivery
       if (d && d.pincode === request.pincode) {
@@ -191,7 +196,8 @@ export function CheckoutForm({ turnstile, prepaidDiscount }: Props) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           ...fields,
-          items: request.items,
+          // Exactly what the summary shows: clamped quantities, and no dropped lines
+          items: quote.lines.map((l) => ({ productId: l.productId, variantId: l.variantId, qty: l.qty })),
           paymentMethod: method,
           discountCode: quote.discountCode,
           turnstileToken: token,

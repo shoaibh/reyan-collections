@@ -85,6 +85,8 @@ export async function markPaid(
         })
         return { outcome: 'late_confirmed' as const, order: updated, stockChanged: true }
       }
+      // Refund inside the lock on purpose: concurrent verify and webhook calls can't double-refund. If the commit
+      // fails after Razorpay refunds, a retry could refund again (accepted at this volume).
       const refund = await getRazorpay().refund(input.paymentId, (order.total ?? 0) * 100)
       const updated = await update({
         paymentStatus: 'refunded',

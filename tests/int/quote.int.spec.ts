@@ -324,7 +324,29 @@ describe('POST /api/checkout/quote', () => {
     const limited = await quote(body, ip)
     expect(limited.status).toBe(429)
     expect(await limited.json()).toEqual({ error: 'Too many attempts. Please try again in an hour.' })
-    // Quotes without a code are not limited
+    // Quotes without a code only hit the general bucket
     expect((await quote({ items: [item(mint, 1)], paymentMethod: 'prepaid' }, ip)).status).toBe(200)
+  })
+
+  it('rate limits every quote per IP at 120 an hour', async () => {
+    const ip = '10.60.1.1'
+    const body = { items: [item(mint, 1)], paymentMethod: 'prepaid' }
+    for (let i = 0; i < 120; i++) expect((await quote(body, ip)).status).toBe(200)
+    const limited = await quote(body, ip)
+    expect(limited.status).toBe(429)
+    expect(await limited.json()).toEqual({ error: 'Too many attempts. Please try again in an hour.' })
+    expect((await quote(body, '10.60.1.2')).status).toBe(200)
+  })
+
+  it('logs the cause when the courier check fails', async () => {
+    const error = vi.spyOn(payload.logger, 'error').mockImplementation(() => payload.logger)
+    const spy = vi.spyOn(mockShiprocket, 'checkServiceability').mockRejectedValueOnce(new Error('down'))
+    await computeCheckout(payload, { items: [item(mint, 1)], pincode: '226001', paymentMethod: 'prepaid' }, 'quote')
+    spy.mockRestore()
+    expect(error).toHaveBeenCalledWith(
+      expect.objectContaining({ pincode: '226001', err: expect.any(Error) }),
+      'Delivery check failed',
+    )
+    error.mockRestore()
   })
 })

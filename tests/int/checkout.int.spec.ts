@@ -6,10 +6,16 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 
 import { POST } from '@/app/(frontend)/api/checkout/route'
 import { drizzleFor } from '@/lib/commerce/db'
+import { cancelPendingOrder } from '@/lib/commerce/orderOps'
 import { computeCheckout } from '@/lib/commerce/quote'
 import { mockRazorpay } from '@/lib/integrations/razorpay/mock'
 import { MOCK_TURNSTILE_TOKEN } from '@/lib/integrations/turnstile'
 import { seed, wipe } from '@/seed'
+
+vi.mock('@/lib/commerce/orderOps', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/commerce/orderOps')>()
+  return { ...actual, cancelPendingOrder: vi.fn(actual.cancelPendingOrder) }
+})
 
 type Line = { productId: number; variantId: string }
 
@@ -354,6 +360,35 @@ describe('POST /api/checkout', () => {
     expect(order!.timeline!.map((t) => t.note)).toEqual(['Order placed', 'Payment could not be started'])
     expect(order!.timeline!.at(-1)!.by).toBe('system')
     expect(await stockOf(mint)).toBe(initialStock[mint.variantId])
+  })
+
+  it('still answers 502 when cancelling the unpaid order fails too', async () => {
+    vi.spyOn(mockRazorpay, 'createOrder').mockRejectedValueOnce(new Error('down'))
+    vi.mocked(cancelPendingOrder).mockRejectedValueOnce(new Error('db down'))
+    const { res, json, body } = await place({ items: [item(mint, 1)], paymentMethod: 'prepaid' })
+    expect(res.status).toBe(502)
+    expect(json).toEqual({ error: "We couldn't start the payment. Please try again." })
+    // The cancel failed, so the order is left pending; put its stock back for the other tests
+    const [order] = await orderByKey(body.idempotencyKey)
+    expect(order!.status).toBe('pending_payment')
+    await cancelPendingOrder(payload, order!.id, 'test cleanup')
+    expect(await stockOf(mint)).toBe(initialStock[mint.variantId])
+  })
+
+  it('holds the daily phone limit under parallel orders', async () => {
+    seq++ // nextPhone() would otherwise repeat the previous case's phone
+    const phone = nextPhone()
+    for (let i = 0; i < 2; i++) {
+      expect((await place({ items: [item(duck, 1)], paymentMethod: 'cod', phone })).res.status).toBe(201)
+    }
+    const results = await Promise.all([
+      place({ items: [item(duck, 1)], paymentMethod: 'cod', phone }),
+      place({ items: [item(duck, 1)], paymentMethod: 'cod', phone }),
+    ])
+    expect(results.map((r) => r.res.status).sort()).toEqual([201, 429])
+    const limited = results.find((r) => r.res.status === 429)!
+    expect(limited.json).toEqual({ error: "You've placed 3 orders today. Please WhatsApp us to order more." })
+    expect(await stockOf(duck)).toBe(initialStock[duck.variantId]! - 3)
   })
 
   it('returns the same order for a repeated key, sequentially and concurrently', async () => {

@@ -28,8 +28,11 @@ export async function POST(request: Request) {
 
   const payload = await getClient()
   const discountCode = optionalString(body.discountCode)
+  const ipHash = hashIp(clientIp(request))
+  const withinLimit = await hitRateLimit(payload, `quote:${ipHash}`, { limit: 120, windowMs: 3_600_000 })
+  if (!withinLimit) return fail('Too many attempts. Please try again in an hour.', 429)
   if (discountCode?.trim()) {
-    const allowed = await hitRateLimit(payload, `quote-code:${hashIp(clientIp(request))}`, {
+    const allowed = await hitRateLimit(payload, `quote-code:${ipHash}`, {
       limit: 30,
       windowMs: 3_600_000,
     })

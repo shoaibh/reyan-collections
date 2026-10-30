@@ -45,7 +45,7 @@ const protectVariantStock: CollectionBeforeChangeHook = async ({ data, originalD
   // table, where checkout decrements it, so an untouched row takes its stock from there (R8).
   const db = await drizzleFor(req.payload, req.transactionID)
   const { rows } = await db.execute(
-    sql`SELECT id, stock::int AS stock FROM products_variants WHERE _parent_id = ${originalDoc.id}`,
+    sql`SELECT id, stock::int AS stock FROM products_variants WHERE _parent_id = ${originalDoc.id} FOR UPDATE`,
   )
   const liveStock = new Map(rows.map((r) => [String(r.id), Number(r.stock)]))
   const original: VariantRow[] = Array.isArray(originalDoc?.variants) ? originalDoc.variants : []

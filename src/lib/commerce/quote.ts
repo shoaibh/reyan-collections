@@ -80,7 +80,8 @@ async function loadDelivery(
       weightGrams,
       cod: true,
     })
-  } catch {
+  } catch (err) {
+    payload.logger.error({ err, pincode }, 'Delivery check failed')
     // Fail closed: the order step turns serviceable: false into a refusal
     return {
       pincode,

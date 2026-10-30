@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto'
 
+import { sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 
 import { formatINR } from '@/lib/format'
@@ -34,6 +35,15 @@ const orderBody = (order: Order): OrderBody => ({
   orderUrl: orderUrl(order.orderNumber, order.accessToken),
   payment: buildPaymentLaunch(order),
 })
+
+/** Thrown inside the transaction to roll it back when the phone already has its daily orders. */
+class PhoneLimitReached extends Error {
+  constructor() {
+    super('Phone daily order limit reached')
+  }
+}
+
+const PHONE_LIMIT_MESSAGE = "You've placed 3 orders today. Please WhatsApp us to order more."
 
 /** Thrown inside the transaction to roll it back when stock ran short. */
 class StockShortfall extends Error {
@@ -101,7 +111,7 @@ export async function placeOrder(
     },
   })
   if (recent >= PHONE_DAILY_LIMIT) {
-    return fail(429, "You've placed 3 orders today. Please WhatsApp us to order more.")
+    return fail(429, PHONE_LIMIT_MESSAGE)
   }
 
   // 6. Re-run the server-side computation; the client's numbers are never trusted
@@ -146,6 +156,16 @@ export async function placeOrder(
   let order: Order
   try {
     order = await withTransaction(payload, async (tx) => {
+      // Authoritative phone limit: the check in step 5 is only a fast path, parallel orders pass it together
+      await tx.db.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${'phone:' + input.customer.phone}))`)
+      const { totalDocs: placed } = await payload.count({
+        collection: 'orders',
+        req: tx.req,
+        where: {
+          and: [{ 'customer.phone': { equals: input.customer.phone } }, { createdAt: { greater_than: since } }],
+        },
+      })
+      if (placed >= PHONE_DAILY_LIMIT) throw new PhoneLimitReached()
       const reserved = await reserveStock(tx.db, stockItems)
       if (!reserved.ok) throw new StockShortfall(reserved.productId, reserved.variantId, reserved.available)
       const orderNumber = formatOrderNumber(await nextNumber(tx.db, 'order', 1000))
@@ -193,6 +213,7 @@ export async function placeOrder(
       })
     })
   } catch (err) {
+    if (err instanceof PhoneLimitReached) return fail(429, PHONE_LIMIT_MESSAGE)
     if (err instanceof StockShortfall) {
       const line = lines.find((l) => l.productId === err.productId && l.variantId === err.variantId)
       const title = line?.title ?? 'this item'
@@ -224,8 +245,16 @@ export async function placeOrder(
         depth: 0,
         data: { razorpay: { orderId: rzp.id } },
       })
-    } catch {
-      await cancelPendingOrder(payload, order.id, 'Payment could not be started')
+    } catch (err) {
+      payload.logger.error({ err, orderNumber: order.orderNumber }, 'Could not start the payment')
+      try {
+        await cancelPendingOrder(payload, order.id, 'Payment could not be started')
+      } catch (cancelErr) {
+        payload.logger.error(
+          { err: cancelErr, orderNumber: order.orderNumber },
+          'Could not cancel the order after a payment start failure',
+        )
+      }
       return fail(502, "We couldn't start the payment. Please try again.")
     }
   }
