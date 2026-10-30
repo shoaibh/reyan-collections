@@ -117,8 +117,12 @@ export function buildInvoice(
   const intraState = Boolean(seller.stateCode && buyerStateCode && seller.stateCode === buyerStateCode)
 
   const items = order.items ?? []
+  if (!items.every((it) => Number.isInteger(it.unitPrice ?? 0)) || !Number.isInteger(order.shippingFee ?? 0)) {
+    throw new Error('Invoice line amounts must be whole rupees')
+  }
   const grosses = items.map((it) => (it.unitPrice ?? 0) * (it.qty ?? 0) * 100)
   const discountTotal = ((order.codeDiscount ?? 0) + (order.prepaidDiscount ?? 0)) * 100
+  if (discountTotal > grosses.reduce((s, g) => s + g, 0)) throw new Error('Discount exceeds item value')
   const discounts = allocate(discountTotal, grosses)
 
   const lines = items.map((it, i) => {

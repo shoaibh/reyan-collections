@@ -21,4 +21,14 @@ describe('amountInWords', () => {
       'Rupees One Crore Twenty Three Lakh Forty Five Thousand Six Hundred Seventy Eight Only',
     )
   })
+
+  it('handles round and boundary values', () => {
+    expect(amountInWords(100)).toBe('Rupees One Hundred Only')
+    expect(amountInWords(101)).toBe('Rupees One Hundred One Only')
+    expect(amountInWords(1000)).toBe('Rupees One Thousand Only')
+    expect(amountInWords(100000)).toBe('Rupees One Lakh Only')
+    expect(amountInWords(99999999)).toBe(
+      'Rupees Nine Crore Ninety Nine Lakh Ninety Nine Thousand Nine Hundred Ninety Nine Only',
+    )
+  })
 })
