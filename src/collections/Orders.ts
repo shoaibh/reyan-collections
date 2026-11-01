@@ -17,6 +17,7 @@ export const Orders: CollectionConfig = {
     useAsTitle: 'orderNumber',
     listSearchableFields: ['orderNumber', 'customer.phone'],
     defaultColumns: ['orderNumber', 'status', 'paymentMethod', 'total', 'createdAt'],
+    components: { beforeListTable: ['/admin/orders/OrderStatusTabs'] },
   },
   access: {
     read: isAdmin,
@@ -26,6 +27,11 @@ export const Orders: CollectionConfig = {
   },
   endpoints,
   fields: [
+    {
+      name: 'actionsPanel',
+      type: 'ui',
+      admin: { components: { Field: '/admin/orders/OrderActionsPanel' } },
+    },
     text('orderNumber', { unique: true, required: true }),
     text('accessToken', { required: true, admin: { ...ro, hidden: true } }),
     {

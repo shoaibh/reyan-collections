@@ -89,6 +89,7 @@ export const Products: CollectionConfig = {
   slug: 'products',
   admin: {
     useAsTitle: 'title',
+    defaultColumns: ['images', 'title', 'price', 'totalStock', '_status'],
   },
   versions: { drafts: true },
   hooks: {
@@ -104,6 +105,21 @@ export const Products: CollectionConfig = {
   },
   fields: [
     { name: 'title', type: 'text', required: true },
+    {
+      // Not stored: the sum of the variant stock, so the owner sees what is left in the products list
+      name: 'totalStock',
+      type: 'number',
+      virtual: true,
+      admin: { readOnly: true, position: 'sidebar' },
+      hooks: {
+        afterRead: [
+          ({ siblingData }) => {
+            const variants = (siblingData as { variants?: { stock?: number | null }[] } | undefined)?.variants
+            return Array.isArray(variants) ? variants.reduce((sum, v) => sum + (v?.stock ?? 0), 0) : undefined
+          },
+        ],
+      },
+    },
     slugField(),
     {
       name: 'images',

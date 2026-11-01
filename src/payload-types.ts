@@ -284,6 +284,7 @@ export interface Curated {
 export interface Product {
   id: number;
   title: string;
+  totalStock?: number | null;
   slug?: string | null;
   images: (number | Media)[];
   boxImage?: (number | null) | Media;
@@ -925,6 +926,7 @@ export interface CuratedSelect<T extends boolean = true> {
  */
 export interface ProductsSelect<T extends boolean = true> {
   title?: T;
+  totalStock?: T;
   slug?: T;
   images?: T;
   boxImage?: T;

@@ -74,6 +74,21 @@ describe('Products', () => {
     for (const row of doc.variants) expect(typeof row.id).toBe('string')
   })
 
+  it('reports totalStock as the sum of the variants stock, in the list and on a single read', async () => {
+    const doc = await create({ title: 'Total Stock Box' })
+    productIds.push(doc.id)
+    const read = await payload.findByID({ collection: 'products', id: doc.id, overrideAccess: true })
+    const expected = read.variants.reduce((sum, v) => sum + (v.stock ?? 0), 0)
+    expect(expected).toBeGreaterThan(0)
+    expect(read.totalStock).toBe(expected)
+    const listed = await payload.find({
+      collection: 'products',
+      where: { id: { equals: doc.id } },
+      overrideAccess: true,
+    })
+    expect(listed.docs[0]?.totalStock).toBe(expected)
+  })
+
   it('requires at least one variant', async () => {
     await expect(create({ variants: [] })).rejects.toThrow()
   })
