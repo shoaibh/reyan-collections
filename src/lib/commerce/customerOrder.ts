@@ -29,6 +29,8 @@ export type CustomerOrderView = {
   trackingUrl: string | null
   payment: CustomerPaymentLaunch | null
   whatsappUrl: string | null
+  /** Tokenized link to the GST invoice; set once the order has an invoice number. */
+  invoiceUrl: string | null
 }
 
 const HEADINGS: Record<OrderStatus, string> = {
@@ -66,7 +68,7 @@ function stepFor(order: Order): 0 | 1 | 2 | 3 {
   return step
 }
 
-function paymentLabelFor(order: Order): string {
+export function paymentLabelFor(order: Order): string {
   if (order.paymentStatus === 'refunded') return 'Refunded'
   if (order.paymentMethod === 'cod') return 'Cash on delivery'
   if (order.paymentStatus === 'paid') return 'Paid online'
@@ -154,6 +156,9 @@ export async function getOrderForCustomer(
           settings.whatsappNumber,
           `Hi, I have a question about my order ${order.orderNumber}`,
         )
+      : null,
+    invoiceUrl: order.invoice?.number
+      ? `/order/${order.orderNumber}/invoice?t=${encodeURIComponent(order.accessToken)}`
       : null,
   }
 }

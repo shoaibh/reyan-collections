@@ -92,6 +92,11 @@ export default async function OrderPage({ params, searchParams }: { params: Para
             Track your parcel
           </a>
         ) : null}
+        {order.invoiceUrl ? (
+          <a href={order.invoiceUrl} className={linkBtn}>
+            Download GST invoice
+          </a>
+        ) : null}
         {order.whatsappUrl ? (
           <a href={order.whatsappUrl} target="_blank" rel="noopener noreferrer" className={linkBtn}>
             Chat on WhatsApp

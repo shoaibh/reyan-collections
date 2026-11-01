@@ -1,6 +1,7 @@
 import type { CollectionConfig, Field } from 'payload'
 
 import { isAdmin } from '../access/isAdmin'
+import { endpoints } from './orders/endpoints'
 import { ORDER_STATUSES, PAYMENT_STATUSES } from '../lib/commerce/orderStateMachine'
 
 const ro = { readOnly: true } as const
@@ -14,6 +15,7 @@ export const Orders: CollectionConfig = {
   slug: 'orders',
   admin: {
     useAsTitle: 'orderNumber',
+    listSearchableFields: ['orderNumber', 'customer.phone'],
     defaultColumns: ['orderNumber', 'status', 'paymentMethod', 'total', 'createdAt'],
   },
   access: {
@@ -22,6 +24,7 @@ export const Orders: CollectionConfig = {
     create: () => false,
     delete: () => false,
   },
+  endpoints,
   fields: [
     text('orderNumber', { unique: true, required: true }),
     text('accessToken', { required: true, admin: { ...ro, hidden: true } }),
