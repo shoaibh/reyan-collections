@@ -107,6 +107,7 @@ describe('getTodayData', () => {
     const G = await place('cod') // cancelled
     const H = await place('prepaid') // delivered on Sunday 23:00 IST, a credit note is needed
     const J = await place('prepaid') // delivered 10 days ago, its alert is handled
+    const K = await place('prepaid') // unpaid online checkout, still pending payment, inside this week
 
     await payload.update({
       collection: 'orders',
@@ -135,6 +136,7 @@ describe('getTodayData', () => {
     await set(G.id, 'cancelled', 20)
     await set(H.id, 'delivered', 68)
     await set(J.id, 'delivered', 240)
+    await set(K.id, 'pending_payment', 10)
 
     // Low stock: Sand has 2 left, one other product has 1; a third is stale on its price check
     const others = (
@@ -217,7 +219,8 @@ describe('getTodayData', () => {
     ])
     expect(today.needsYou).toBe(2 + 2 + 3)
 
-    // Monday 00:00 IST to now: A, I, B, B2, C, D, E, F. Not the cancelled G, not Sunday's H, not J
+    // Monday 00:00 IST to now: A, I, B, B2, C, D, E, F. Not the cancelled G, not Sunday's H, not J,
+    // and not the unpaid K (an unpaid checkout is not revenue; it also stays out of the sold counts above)
     const weekDocs = [a!, i!, b!, b2!, c!, d!, e!, f!]
     expect(today.week).toEqual({
       revenue: weekDocs.reduce((sum, o) => sum + (o.total ?? 0), 0),

@@ -73,7 +73,8 @@ export async function getTodayData(payload: Payload, now: Date, adminName: strin
     and: [
       { createdAt: { greater_than_equal: recentSince.toISOString() } },
       { createdAt: { less_than_equal: now.toISOString() } },
-      { status: { not_equals: 'cancelled' } },
+      // Cancelled orders and unpaid online checkouts (they expire within the hour) are not revenue or sales
+      { status: { not_in: ['cancelled', 'pending_payment'] } },
     ],
   }
 
