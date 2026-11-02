@@ -20,13 +20,15 @@ test('owner manages stock of a colour variant', async ({ page, request }) => {
     await expect(passwordInput).toHaveValue(password, { timeout: 500 })
   }).toPass()
   await page.getByRole('button', { name: 'Login' }).click()
-  await expect(page.locator('span[title="Dashboard"]')).toBeVisible()
+  // The Today view's heading: "N things need you" or "All caught up"
+  await expect(page.getByRole('heading', { level: 1, name: /needs? you|All caught up/ })).toBeVisible()
 
   // Products list shows the seeded product
   await page.goto('/admin/collections/products')
   const row = page.getByText('Mexico premium container, set of 2')
   await expect(row).toBeVisible()
-  await row.click()
+  // The row's link sits on its image cell (the first column), not on the title text
+  await page.getByRole('row', { name: /Mexico premium container, set of 2/ }).getByRole('link').first().click()
 
   // Both colour variants are present
   await expect(page.locator('input[name="variants.0.name"]')).toHaveValue('Mint')

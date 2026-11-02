@@ -131,7 +131,7 @@ function actionsOf(order: Order): PanelAction[] {
   return actions
 }
 
-function autoCancelLabelOf(
+export function autoCancelLabelOf(
   order: Order,
   settings: { pendingPaymentMinutes: number; codConfirmHours: number },
   now: Date,

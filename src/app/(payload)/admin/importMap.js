@@ -25,6 +25,7 @@ import { default as default_de1726347e72225d4d8b8847a09121f1 } from '../../../ad
 import { default as default_25fb3a5e1d81fbddd10690ca98a3a8c4 } from '../../../admin/orders/OrderStatusTabs'
 import { default as default_07eaf1d5745ea58d191ef5762e282db9 } from '../../../admin/brand/Icon'
 import { default as default_e2609525d3cb4faff6e05c9e8878dd7a } from '../../../admin/brand/Logo'
+import { default as default_c1182decc0bd19cd67006733d2b54321 } from '../../../admin/today/TodayView'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
 /** @type import('payload').ImportMap */
@@ -56,5 +57,6 @@ export const importMap = {
   "/admin/orders/OrderStatusTabs#default": default_25fb3a5e1d81fbddd10690ca98a3a8c4,
   "/admin/brand/Icon#default": default_07eaf1d5745ea58d191ef5762e282db9,
   "/admin/brand/Logo#default": default_e2609525d3cb4faff6e05c9e8878dd7a,
+  "/admin/today/TodayView#default": default_c1182decc0bd19cd67006733d2b54321,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

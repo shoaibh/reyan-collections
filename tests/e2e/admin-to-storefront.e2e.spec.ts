@@ -61,7 +61,8 @@ async function adminLogin(page: Page) {
     await expect(passwordInput).toHaveValue(password, { timeout: 500 })
   }).toPass()
   await page.getByRole('button', { name: 'Login' }).click()
-  await expect(page.locator('span[title="Dashboard"]')).toBeVisible()
+  // The Today view's heading: "N things need you" or "All caught up"
+  await expect(page.getByRole('heading', { level: 1, name: /needs? you|All caught up/ })).toBeVisible()
 }
 
 test('owner publishes a new product and shoppers see it', async ({ page, request }) => {

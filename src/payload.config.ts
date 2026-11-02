@@ -35,6 +35,9 @@ export default buildConfig({
         Logo: '/admin/brand/Logo',
         Icon: '/admin/brand/Icon',
       },
+      views: {
+        dashboard: { Component: '/admin/today/TodayView' },
+      },
     },
     meta: {
       titleSuffix: '· Reyan Collections',
