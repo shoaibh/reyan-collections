@@ -280,11 +280,12 @@ const OrderActionsPanel: React.FC = () => {
         ) : null}
 
         {has('mark-returned') ? (
-          <form
+          // A div, not a <form>: this panel renders inside Payload's own edit form, and forms cannot nest
+          <div
             className={styles.form}
-            onSubmit={(e) => {
-              e.preventDefault()
-              void call('/mark-returned', { method: 'POST', body: { restock, refundNote } })
+            onKeyDown={(e) => {
+              // Enter in the note must not submit Payload's surrounding form
+              if (e.key === 'Enter') e.preventDefault()
             }}
           >
             <label>
@@ -297,10 +298,21 @@ const OrderActionsPanel: React.FC = () => {
                 <input type="text" required value={refundNote} onChange={(e) => setRefundNote(e.target.value)} />
               </label>
             ) : null}
-            <button type="submit" className={`${styles.big} ${styles.dark}`} disabled={busy}>
+            <button
+              type="button"
+              className={`${styles.big} ${styles.dark}`}
+              disabled={busy}
+              onClick={() => {
+                if (cod && refundNote.trim() === '') {
+                  setError('Add a cash refund note first.')
+                  return
+                }
+                void call('/mark-returned', { method: 'POST', body: { restock, refundNote } })
+              }}
+            >
               Mark returned
             </button>
-          </form>
+          </div>
         ) : null}
 
         {has('restock') ? (
