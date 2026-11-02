@@ -104,7 +104,7 @@ describe('getTodayData', () => {
     const D = await place('cod') // shipped
     const E = await place('prepaid') // out for delivery
     const F = await place('prepaid') // delivered, with a payment alert
-    const G = await place('cod') // cancelled
+    const G = await place('cod') // cancelled after invoicing, a credit note is needed
     const H = await place('prepaid') // delivered on Sunday 23:00 IST, a credit note is needed
     const J = await place('prepaid') // delivered 10 days ago, its alert is handled
     const K = await place('prepaid') // unpaid online checkout, still pending payment, inside this week
@@ -118,6 +118,11 @@ describe('getTodayData', () => {
       collection: 'orders',
       id: H.id,
       data: { creditNote: { needed: true, handled: false } } as never,
+    })
+    await payload.update({
+      collection: 'orders',
+      id: G.id,
+      data: { invoice: { number: 'RC/26-27/0003' }, creditNote: { needed: true, handled: false } } as never,
     })
     await payload.update({
       collection: 'orders',
@@ -163,7 +168,7 @@ describe('getTodayData', () => {
     })
 
     const doc = (id: number) => payload.findByID({ collection: 'orders', id, depth: 0 })
-    const [a, i, b, b2, c, d, e, f, h] = await Promise.all([A, I, B, B2, C, D, E, F, H].map((o) => doc(o.id)))
+    const [a, i, b, b2, c, d, e, f, g, h] = await Promise.all([A, I, B, B2, C, D, E, F, G, H].map((o) => doc(o.id)))
     const summary = itemSummary(a!.items)
     expect(summary).toContain('(Sand)')
 
@@ -212,12 +217,18 @@ describe('getTodayData', () => {
         orderId: H.id,
       },
       {
+        kind: 'creditNote',
+        title: `#${g!.orderNumber} · Credit note needed (cancelled after invoicing)`,
+        href: `/admin/collections/orders/${G.id}`,
+        orderId: G.id,
+      },
+      {
         kind: 'staleCompare',
         title: `Re-check marketplace price: ${others[1]!.title}`,
         href: `/admin/collections/products/${others[1]!.id}`,
       },
     ])
-    expect(today.needsYou).toBe(2 + 2 + 3)
+    expect(today.needsYou).toBe(2 + 2 + 4)
 
     // Monday 00:00 IST to now: A, I, B, B2, C, D, E, F. Not the cancelled G, not Sunday's H, not J,
     // and not the unpaid K (an unpaid checkout is not revenue; it also stays out of the sold counts above)

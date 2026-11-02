@@ -155,6 +155,31 @@ describe('shiprocket live', () => {
     expect(calls[1].body).toEqual({ ids: [555] })
   })
 
+  describe('cancelShipment idempotency', () => {
+    const stubCancel = (status: number, body: unknown) =>
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) => (url.endsWith('/auth/login') ? json({ token: 't' }) : json(body, status))),
+      )
+
+    it('treats an already-cancelled response as success', async () => {
+      stubCancel(400, { message: 'Order is already cancelled' })
+      await expect(createLiveShiprocket().cancelShipment('555')).resolves.toBeUndefined()
+    })
+
+    it('treats a 4xx that says cancelled as success', async () => {
+      stubCancel(422, { message: 'Order cancelled' })
+      await expect(createLiveShiprocket().cancelShipment('555')).resolves.toBeUndefined()
+    })
+
+    it('still rejects other failures', async () => {
+      stubCancel(400, { message: 'Invalid order id' })
+      await expect(createLiveShiprocket().cancelShipment('555')).rejects.toThrow('400')
+      stubCancel(500, { message: 'cancelled upstream timeout' })
+      await expect(createLiveShiprocket().cancelShipment('555')).rejects.toThrow('500')
+    })
+  })
+
   it('maps serviceability to the fastest courier', async () => {
     let requested = ''
     vi.stubGlobal(

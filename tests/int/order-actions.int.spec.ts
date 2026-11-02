@@ -290,6 +290,40 @@ describe('order actions', () => {
     expect(await stockOf(sand)).toBe(before)
   })
 
+  it('lets the admin retry a cancel after a refund failure: the courier cancel repeats harmlessly and one refund goes out', async () => {
+    const order = await placeBooked()
+    // The live adapter treats "already cancelled" as success, so a repeat resolves like the mock does.
+    const cancel = vi.spyOn(mockShiprocket, 'cancelShipment')
+    const refund = vi.spyOn(mockRazorpay, 'refund').mockRejectedValueOnce(new Error('down'))
+    const first = await cancelOrder(payload, order.id, { by: 'admin', note: 'x' })
+    expect(first).toEqual({ ok: false, status: 502, error: "We couldn't process the refund. Please try again." })
+    expect(await reload(order.id)).toMatchObject({ status: 'confirmed', paymentStatus: 'paid' })
+    const second = await cancelOrder(payload, order.id, { by: 'admin', note: 'x' })
+    expect(second).toMatchObject({ ok: true, changed: true })
+    expect(cancel).toHaveBeenCalledTimes(2)
+    expect(refund).toHaveBeenCalledTimes(2)
+    expect(await reload(order.id)).toMatchObject({ status: 'cancelled', paymentStatus: 'refunded' })
+  })
+
+  it('flags a credit note when an invoiced order is cancelled, and not otherwise', async () => {
+    const invoiced = await placePaid()
+    await payload.update({
+      collection: 'orders',
+      id: invoiced.id,
+      depth: 0,
+      data: { status: 'ready_to_ship', invoice: { number: 'RC/26-27/0002' } } as never,
+    })
+    expect(await cancelOrder(payload, invoiced.id, { by: 'admin', note: 'x' })).toMatchObject({ ok: true })
+    expect(await reload(invoiced.id)).toMatchObject({
+      status: 'cancelled',
+      invoice: { number: 'RC/26-27/0002' },
+      creditNote: { needed: true },
+    })
+    const plain = await placePaid()
+    expect(await cancelOrder(payload, plain.id, { by: 'admin', note: 'x' })).toMatchObject({ ok: true })
+    expect((await reload(plain.id)).creditNote?.needed).toBeFalsy()
+  })
+
   it('refuses a cancel from a status outside allowFrom', async () => {
     const order = await place('cod')
     const res = await cancelOrder(payload, order.id, { by: 'system', note: 'x', allowFrom: ['pending_payment'] })

@@ -186,7 +186,7 @@ export async function getTodayData(payload: Payload, now: Date, adminName: strin
     if (order.creditNote?.needed && !order.creditNote.handled) {
       alerts.push({
         kind: 'creditNote',
-        title: `#${order.orderNumber} · Credit note needed (returned after invoicing)`,
+        title: `#${order.orderNumber} · Credit note needed (${order.status === 'cancelled' ? 'cancelled' : 'returned'} after invoicing)`,
         href: orderHref(order.id),
         orderId: order.id,
       })

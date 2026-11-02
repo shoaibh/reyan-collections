@@ -40,6 +40,17 @@ async function getToken(): Promise<string> {
   return login()
 }
 
+/** A non-2xx Shiprocket reply. The message keeps the old "failed with status N" shape. */
+class ShiprocketHttpError extends Error {
+  constructor(
+    path: string,
+    readonly status: number,
+    readonly detail: string,
+  ) {
+    super(`Shiprocket ${path} failed with status ${status}`)
+  }
+}
+
 async function request<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
   const send = async (token: string) =>
     fetch(`${API}${path}`, {
@@ -53,7 +64,7 @@ async function request<T>(method: 'GET' | 'POST', path: string, body?: unknown):
     cached = null
     res = await send(await login())
   }
-  if (!res.ok) throw new Error(`Shiprocket ${path} failed with status ${res.status}`)
+  if (!res.ok) throw new ShiprocketHttpError(path, res.status, await res.text().catch(() => ''))
   return (await res.json()) as T
 }
 
@@ -185,7 +196,20 @@ export function createLiveShiprocket(): ShiprocketClient {
     },
 
     async cancelShipment(shiprocketOrderId: string): Promise<void> {
-      await request('POST', '/orders/cancel', { ids: [Number(shiprocketOrderId)] })
+      try {
+        await request('POST', '/orders/cancel', { ids: [Number(shiprocketOrderId)] })
+      } catch (err) {
+        // Cancel is idempotent: a retry after a later failure (a refund) must not be blocked by the
+        // courier saying it is already done. The exact live response is unverified until go-live.
+        if (
+          err instanceof ShiprocketHttpError &&
+          (/already\s+cancel/i.test(err.detail) ||
+            (err.status >= 400 && err.status < 500 && /cancelled/i.test(err.detail)))
+        ) {
+          return
+        }
+        throw err
+      }
     },
 
     async trackAwb(awb: string): Promise<TrackResult> {

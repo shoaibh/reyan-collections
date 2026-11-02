@@ -159,6 +159,8 @@ export function cancelOrder(
       data.paymentStatus = 'refunded'
       data.razorpay = { ...order.razorpay, refundId: refund.refundId }
     }
+    // An invoice number is never withdrawn, so a cancel after invoicing needs a credit note.
+    if (order.invoice?.number) data.creditNote = { ...order.creditNote, needed: true }
     const updated = await update(tx, payload, orderId, data)
     return {
       order: updated,

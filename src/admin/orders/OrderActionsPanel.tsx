@@ -284,8 +284,8 @@ const OrderActionsPanel: React.FC = () => {
           <div
             className={styles.form}
             onKeyDown={(e) => {
-              // Enter in the note must not submit Payload's surrounding form
-              if (e.key === 'Enter') e.preventDefault()
+              // Enter in the note must not submit Payload's surrounding form; Enter on a button still activates it
+              if (e.key === 'Enter' && e.target instanceof HTMLInputElement && e.target.type === 'text') e.preventDefault()
             }}
           >
             <label>

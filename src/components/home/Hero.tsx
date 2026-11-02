@@ -29,13 +29,17 @@ function Headline({ text, highlight }: { text: string; highlight?: string | null
   )
 }
 
+/** A homepage global saved without its hero group renders the same as one with no products picked. */
+const EMPTY_HERO = { headline: '' } as Homepage['hero']
+
 export function Hero({
-  hero,
+  hero: heroProp,
   ratings,
 }: {
-  hero: Homepage['hero']
+  hero: Homepage['hero'] | undefined
   ratings: NonNullable<StoreSetting['social']>['ratings']
 }) {
+  const hero = heroProp ?? EMPTY_HERO
   const productA = publishedProduct(hero.productA)
   const productB = publishedProduct(hero.productB)
   const imageA =
