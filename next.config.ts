@@ -3,6 +3,8 @@ import type { NextConfig } from 'next'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
+import { storefrontSecurityHeaders } from './src/lib/securityHeaders'
+
 const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
 
@@ -20,6 +22,18 @@ const nextConfig: NextConfig = {
       },
     ],
     remotePatterns: r2Host ? [{ protocol: 'https', hostname: r2Host }] : [],
+  },
+  async headers() {
+    return [
+      {
+        // Storefront only: not the Payload admin, the API or Next's own assets
+        source: '/((?!admin|api|_next).*)',
+        headers: storefrontSecurityHeaders({
+          production: process.env.NODE_ENV === 'production',
+          mediaOrigin: process.env.R2_PUBLIC_URL ? new URL(process.env.R2_PUBLIC_URL).origin : undefined,
+        }),
+      },
+    ]
   },
   webpack: (webpackConfig) => {
     webpackConfig.resolve.extensionAlias = {
