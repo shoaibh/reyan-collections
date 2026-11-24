@@ -6,6 +6,7 @@ import type { Payload } from 'payload'
 import { formatINR } from '@/lib/format'
 import { getRazorpay } from '@/lib/integrations/razorpay'
 import { getTurnstile } from '@/lib/integrations/turnstile'
+import { afterResponse } from '@/lib/afterResponse'
 import { notify } from '@/lib/notifications/notify'
 import type { Order } from '@/payload-types'
 import { revalidate } from '@/lib/revalidate'
@@ -234,8 +235,9 @@ export async function placeOrder(
 
   // Cash on delivery: the order is placed, so tell the customer and the owner
   if (cod) {
-    await notify(payload, 'order_received', order)
-    await notify(payload, 'admin_new_order', order)
+    await afterResponse(() =>
+      Promise.all([notify(payload, 'order_received', order), notify(payload, 'admin_new_order', order)]),
+    )
   }
 
   // 9. Prepaid: open the Razorpay order

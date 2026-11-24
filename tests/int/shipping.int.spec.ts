@@ -5,7 +5,7 @@ import { sql } from '@payloadcms/db-postgres'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { POST as checkoutPost } from '@/app/(frontend)/api/checkout/route'
-import { POST as shiprocketWebhookPost } from '@/app/(frontend)/api/webhooks/shiprocket/route'
+import { POST as shiprocketWebhookPost } from '@/app/(frontend)/api/webhooks/courier/route'
 import { drizzleFor } from '@/lib/commerce/db'
 import { financialYear } from '@/lib/commerce/invoice'
 import { applyCourierEvent, parseCourierTime, confirmOrder, shipOrder } from '@/lib/commerce/orderActions'
@@ -94,7 +94,7 @@ const event = (awb: string, rawStatus: string, at = new Date().toISOString()) =>
 
 const webhook = (body: unknown, token: string | null) =>
   shiprocketWebhookPost(
-    new Request('http://localhost/api/webhooks/shiprocket', {
+    new Request('http://localhost/api/webhooks/courier', {
       method: 'POST',
       headers: token === null ? {} : { 'x-api-key': token },
       body: typeof body === 'string' ? body : JSON.stringify(body),
@@ -221,6 +221,23 @@ describe('shipping and courier events', () => {
     const late = await reload(order.id)
     expect(late.status).toBe('delivered')
     expect(late.shipment?.events?.some((e) => e.status === 'IN TRANSIT')).toBe(true)
+  })
+
+  it('records an event with no readable timestamp once, and still records two readable timestamps', async () => {
+    const order = await shipped('cod')
+    const awb = order.shipment!.awb as string
+    await event(awb, 'IN TRANSIT', '')
+    await event(awb, 'IN TRANSIT', '')
+    const blank = (await reload(order.id)).shipment?.events?.filter((e) => e.status === 'IN TRANSIT') ?? []
+    expect(blank).toHaveLength(1)
+
+    await event(awb, 'OUT FOR DELIVERY', '2026-10-30T09:00:00.000Z')
+    await event(awb, 'OUT FOR DELIVERY', '2026-10-30T10:00:00.000Z')
+    const readable = (await reload(order.id)).shipment?.events?.filter((e) => e.status === 'OUT FOR DELIVERY') ?? []
+    expect(readable).toHaveLength(2)
+
+    const res = await webhook({ awb, current_status: 'DELIVERED', current_timestamp: '2026-10-30T12:00:00.000Z' }, MOCK_SHIPROCKET_WEBHOOK_TOKEN)
+    expect(res.status).toBe(200)
   })
 
   it('walks shipped then delivered when DELIVERED arrives while ready to ship', async () => {

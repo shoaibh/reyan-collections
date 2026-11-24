@@ -428,15 +428,17 @@ export async function applyCourierEvent(
 
   const applied: OrderStatus[] = []
   const result = await runAction(payload, orderId, async (tx, order) => {
-    let when = parseCourierTime(input.at)
-    if (!when) {
-      payload.logger.warn({ at: input.at, awb: input.awb }, 'Unreadable courier timestamp, using now')
-      when = new Date().toISOString()
-    }
+    const parsed = parseCourierTime(input.at)
+    const when = parsed ?? new Date().toISOString()
     const events = order.shipment?.events ?? []
-    const duplicate = events.some(
-      (e) => e.status === input.rawStatus && e.at && new Date(e.at).getTime() === new Date(when).getTime(),
+    // Without a readable timestamp the time can't tell a repeat from a new event (hourly polling), so the status does
+    const duplicate = events.some((e) =>
+      e.status === input.rawStatus &&
+      (parsed === null || (e.at && new Date(e.at).getTime() === new Date(when).getTime())),
     )
+    if (parsed === null && !duplicate) {
+      payload.logger.warn({ at: input.at, awb: input.awb }, 'Unreadable courier timestamp, using now')
+    }
     const data: Partial<Order> = {}
     if (!duplicate) {
       data.shipment = {
