@@ -24,6 +24,7 @@ import { StoreSettings } from './globals/StoreSettings'
 import { assertProductionEnv } from './lib/env'
 import { storagePlugins } from './lib/storage'
 import { jobsAutoRun, jobTasks, runJobsNowEndpoint } from './jobs'
+import { migrations } from './migrations'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -59,6 +60,7 @@ export default buildConfig({
     pool: {
       connectionString: process.env.DATABASE_URI || '',
     },
+    prodMigrations: migrations,
   }),
   endpoints: [runJobsNowEndpoint],
   jobs: { tasks: jobTasks, autoRun: jobsAutoRun },
