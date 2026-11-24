@@ -365,7 +365,7 @@ delivered ──admin marks return received──▶ returned (prepaid → refun
   2. Request an AWB with Shiprocket's recommended courier **[call]**, or let the admin pick from the available courier list in v1.1.
   3. Generate the pickup request.
   4. Store the AWB, courier, `labelUrl` and `trackingUrl`. The order becomes `ready_to_ship`, and the **GST invoice is issued** at this point (§9).
-- **Tracking webhook** `/api/webhooks/shiprocket`: verify it with a shared token header. Map the Shiprocket status to ours: picked up / in transit → `shipped`, out for delivery → `out_for_delivery`, delivered → `delivered`, RTO → `rto`. Append to `shipment.events`.
+- **Tracking webhook** `/api/webhooks/courier`: verify it with a shared token header. Map the Shiprocket status to ours: picked up / in transit → `shipped`, out for delivery → `out_for_delivery`, delivered → `delivered`, RTO → `rto`. Append to `shipment.events`.
 - A **packing slip** (A6/A4 printable HTML) lists the order number, items, qty, and the "what's in the box" checklist. "Print all packing slips" covers every order in `ready_to_ship`.
 
 ### 8.7 Cancellation, refunds and returns
@@ -439,7 +439,7 @@ docs/
 - `POST /api/checkout/verify`: prepaid signature verification.
 - `GET /api/serviceability?pincode=&cod=`: delivery check (cached per pincode for 24h in memory/DB).
 - `GET /api/stock?ids=`: live stock for product pages and cart.
-- `POST /api/webhooks/razorpay`, `POST /api/webhooks/shiprocket`
+- `POST /api/webhooks/razorpay`, `POST /api/webhooks/courier`
 - Admin-only (Payload auth): `POST /api/orders/:id/{confirm|ship|cancel|mark-returned|mark-delivered}`, `GET /api/orders/:id/invoice.pdf`, `GET /api/orders/packing-slips?ids=`
 - Public tokenized: `GET /api/orders/:orderNumber?t=` (status page data), `POST /api/track` (orderNumber + phone)
 - `GET /api/health`

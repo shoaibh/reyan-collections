@@ -1,0 +1,203 @@
+/* The Today view. Scoped to this module; nothing here touches Payload's own admin styles. */
+.today {
+  --ink: #1e1b4b;
+  --muted: #6c6c84;
+  --line: #efeff3;
+  --amber: #f5a524;
+  --blue: #2d5bff;
+  --red: #e5484d;
+  --green: #2bb673;
+  --wa: #25d366;
+  max-width: 720px;
+  margin: 0 0 32px;
+  /* The default template adds no side gutter of its own around a dashboard view */
+  padding: 0 16px;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: #18182a;
+}
+
+.today * {
+  box-sizing: border-box;
+}
+
+.heading {
+  padding: 6px 4px 12px;
+}
+.heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.heading h1 {
+  margin: 2px 0 0;
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: inherit;
+}
+
+.week {
+  background: var(--ink);
+  color: #fff6da;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin: 0 0 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.week b {
+  display: block;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+.week small {
+  opacity: 0.75;
+  font-size: 11.5px;
+}
+.chips {
+  display: flex;
+  gap: 6px;
+}
+.chips span {
+  background: rgba(255, 246, 218, 0.14);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.card {
+  background: #fff;
+  margin: 0 0 12px;
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border-left: 4px solid #ccc;
+  color: #18182a;
+}
+.amber { border-left-color: var(--amber); }
+.blue { border-left-color: var(--blue); }
+.red { border-left-color: var(--red); }
+.green { border-left-color: var(--green); }
+
+.cardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.cardHead h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: inherit;
+}
+.count {
+  background: #f4f4f7;
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+.cardHead + .row { border-top: 0; }
+
+.meta {
+  flex: 1 1 160px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.meta b {
+  display: block;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.meta small {
+  display: block;
+  color: var(--muted);
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
+}
+
+.acts {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+.waBtn,
+.okBtn,
+.priBtn {
+  border: 0;
+  border-radius: 10px;
+  padding: 7px 10px;
+  font: inherit;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+.waBtn { background: var(--wa); color: #fff; }
+.okBtn { background: #f4f4f7; color: #18182a; }
+.priBtn { background: var(--ink); color: #fff; }
+.okBtn:disabled,
+.priBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.link {
+  color: var(--blue);
+  font-weight: 600;
+  font-size: 12.5px;
+  text-decoration: none;
+}
+.booked {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.rowError {
+  flex-basis: 100%;
+  background: #fde8e9;
+  color: #b3262b;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.two a {
+  background: #f4f4f7;
+  color: #18182a;
+  border-radius: 12px;
+  padding: 10px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 12.5px;
+  text-decoration: none;
+}
