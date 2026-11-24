@@ -57,6 +57,7 @@
     "vitest": "4.0.18"
   },
   "engines": {
-    "node": ">=22"
-  }
+    "node": "26.x"
+  },
+  "packageManager": "pnpm@11.4.0"
 }
