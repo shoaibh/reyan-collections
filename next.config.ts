@@ -6,6 +6,9 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
 
+// Media is served straight from the R2 public domain in production, so next/image must allow its host
+const r2Host = process.env.R2_PUBLIC_URL ? new URL(process.env.R2_PUBLIC_URL).hostname : undefined
+
 const nextConfig: NextConfig = {
   // The Payload admin and the storefront are separate root layouts, so a URL that matches no route at
   // all needs a global 404 (a root app/not-found.tsx has no single layout to render inside)
@@ -16,6 +19,7 @@ const nextConfig: NextConfig = {
         pathname: '/api/media/file/**',
       },
     ],
+    remotePatterns: r2Host ? [{ protocol: 'https', hostname: r2Host }] : [],
   },
   webpack: (webpackConfig) => {
     webpackConfig.resolve.extensionAlias = {

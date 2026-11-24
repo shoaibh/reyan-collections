@@ -21,6 +21,7 @@ import { Homepage } from './globals/Homepage'
 import { Navigation } from './globals/Navigation'
 import { LinksPage } from './globals/LinksPage'
 import { StoreSettings } from './globals/StoreSettings'
+import { assertProductionEnv } from './lib/env'
 import { storagePlugins } from './lib/storage'
 import { jobsAutoRun, jobTasks, runJobsNowEndpoint } from './jobs'
 
@@ -64,4 +65,7 @@ export default buildConfig({
   sharp,
   upload: { limits: { fileSize: 15_000_000 }, abortOnLimit: true },
   plugins: [...storagePlugins()],
+  onInit: () => {
+    if (process.env.NODE_ENV === 'production') assertProductionEnv()
+  },
 })
